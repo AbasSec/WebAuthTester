@@ -75,7 +75,10 @@ class DiscoveryEngine:
                     continue
                 
                 self.visited.add(url)
-                headers = {'User-Agent': get_random_ua()}
+                headers = {
+                    'User-Agent': get_random_ua(),
+                    'Accept-Encoding': 'gzip, deflate'
+                }
                 
                 async with self.session.get(url, headers=headers, proxy=self.proxy, timeout=10) as resp:
                     if resp.status == 404: continue
@@ -138,7 +141,6 @@ class DiscoveryEngine:
 
     async def _extract_links(self, html, source):
         soup = BeautifulSoup(html, 'html.parser')
-        # FIX: Find tags with EITHER href OR src
         for tag in soup.find_all(['a', 'script', 'link']):
             val = tag.get('href') or tag.get('src')
             if not val: continue
@@ -192,10 +194,12 @@ class BruteEngine:
         """Handles the low-level request logic for different auth types."""
         try:
             payload = {ep.username_field: u, ep.password_field: p, **ep.extra_fields}
-            headers = {'User-Agent': get_random_ua()}
+            headers = {
+                'User-Agent': get_random_ua(),
+                'Accept-Encoding': 'gzip, deflate'
+            }
             
             if ep.auth_type == 'universal_json':
-                # Firebase and many APIs require JSON content-type
                 async with self.session.post(ep.url, json=payload, headers=headers, proxy=self.proxy, allow_redirects=False, timeout=15) as resp:
                     body = await resp.text(errors='ignore')
                     return resp.status, body, dict(resp.headers)

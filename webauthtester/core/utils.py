@@ -49,10 +49,10 @@ def display_results(results: List[Tuple[str, str, str]]) -> None:
         console.print("[yellow][*] Audit complete. No valid credentials found.[/yellow]")
         return
 
-    table = Table(title="[bold green]VALID CREDENTIALS IDENTIFIED[/bold green]", border_style="green")
-    table.add_column("Endpoint", style="cyan", no_wrap=True)
-    table.add_column("Username", style="white")
-    table.add_column("Password", style="bold red")
+    table = Table(title="[bold green]VALID CREDENTIALS IDENTIFIED[/bold green]", border_style="green", expand=True)
+    table.add_column("Endpoint", style="cyan", overflow="fold")
+    table.add_column("Username", style="white", no_wrap=True)
+    table.add_column("Password", style="bold red", no_wrap=True)
 
     for url, u, p in results:
         table.add_row(url, u, p)
