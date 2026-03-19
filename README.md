@@ -1,3 +1,4 @@
+```text
  __      __      ___.       _____         __  .__     
 /  \    /  \ ____\_ |__    /  _  \  __ ___/  |_|  |__  
 \   \/\/   // __ \| __ \  /  /_\  \|  |  \   __\  |  \ 
@@ -5,6 +6,7 @@
   \__/\  /  \___  >___  /\____|__  /____/ |__| |___|  /
        \/       \/    \/         \/                 \/ 
                  v2.2 - Enterprise Security Research Suite
+```
 
 **WebAuthTester Pro** — Enterprise Automated Web Security Testing Framework
 Reconnaissance · Exploitation · Authorization · Intelligence
