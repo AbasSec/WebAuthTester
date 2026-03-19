@@ -9,6 +9,7 @@ import argparse
 import os
 import sys
 import yaml
+from textwrap import dedent
 
 from webauthtester.core.engine import DiscoveryEngine, BruteEngine
 from webauthtester.core.utils import show_banner, print_error, print_status, print_success, display_results, console
@@ -21,7 +22,20 @@ def load_config(config_path="config.yaml"):
     return {}
 
 async def run_audit():
-    parser = argparse.ArgumentParser(description="WebAuthTester Pro - Enterprise Security Research Suite")
+    usage_examples = dedent("""
+        [bold yellow]Usage Examples:[/bold yellow]
+          python3 WebAuthTester.py -t https://example.com
+          python3 WebAuthTester.py -t https://target.com -u users.txt -p pass.txt
+          python3 WebAuthTester.py -t https://api.target.com/v1/login -c 20 -x http://127.0.0.1:8080
+          python3 WebAuthTester.py --stealth -t https://protected-site.com
+    """)
+
+    parser = argparse.ArgumentParser(
+        description="WebAuthTester Pro - Enterprise Security Research Suite",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=usage_examples
+    )
+    
     parser.add_argument("-t", "--target", help="Target URL (e.g., https://example.com)")
     parser.add_argument("-u", "--userlist", help="Username wordlist")
     parser.add_argument("-p", "--passlist", help="Password wordlist")
@@ -45,10 +59,6 @@ async def run_audit():
     
     if not target:
         parser.print_help()
-        print("\n[bold yellow]Usage Examples:[/bold yellow]")
-        print("  python3 WebAuthTester.py -t https://example.com")
-        print("  python3 WebAuthTester.py -t https://target.com -u users.txt -p pass.txt")
-        print("  python3 WebAuthTester.py -t https://api.target.com/v1/login -c 20 -x http://127.0.0.1:8080")
         return
 
     if not os.path.exists(userlist) or not os.path.exists(passlist):
@@ -105,7 +115,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         sys.exit(0)
     except Exception as e:
-        # Simple error print for cleaner CLI output on missing deps
         if "rich" in str(e):
              print(f"[!] Fatal error: {e}")
         else:
