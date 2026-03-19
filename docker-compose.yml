@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  webauthtester:
+    build: .
+    volumes:
+      - ./wordlists:/app/wordlists
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["https://example.com"]  # Default target, can be overridden

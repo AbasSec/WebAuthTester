@@ -1,0 +1,23 @@
+# WebAuthTester Pro Configuration
+# Professional Enterprise Research Suite
+
+# Target Settings
+target: "https://example.com"
+discovery_depth: 50
+max_crawl_time: 300
+
+# Wordlist Paths
+wordlists:
+  usernames: "wordlists/usernames.txt"
+  passwords: "wordlists/passwords.txt"
+
+# Performance & Stealth
+concurrency: 10
+timeout: 15
+proxy: null
+user_agent: "random"  # Use 'random' or a specific UA string
+
+# Reporting
+output_dir: "reports"
+generate_json: true
+generate_markdown: true

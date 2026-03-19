@@ -29,3 +29,4 @@ dependencies = [
 
 [project.scripts]
 webauthtester = "main:run_audit"
+PyYAML>=6.0
