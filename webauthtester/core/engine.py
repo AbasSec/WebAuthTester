@@ -79,29 +79,42 @@ class DiscoveryEngine:
 
     async def _extract_bs4(self, html, source):
         soup = BeautifulSoup(html, 'html.parser')
+        
+        # 1. Standard Form Extraction
         for form in soup.find_all('form'):
             action = urllib.parse.urljoin(source, form.get('action') or source)
             u, p = None, None
             inputs = {}
             for inp in form.find_all(['input', 'textarea', 'select']):
-                name = inp.get('name')
+                name = inp.get('name') or inp.get('id')
                 if not name: continue
                 itype = (inp.get('type') or 'text').lower()
                 if itype == "password" or "pass" in name.lower(): p = name
                 elif any(x in name.lower() for x in ["user", "email", "login"]): u = name
                 inputs[name] = inp.get('value') or ''
+            
             if u and p:
-                ep = AuthEndpoint(
-                    url=action, 
-                    auth_type='form_urlencoded', 
-                    method=form.get('method', 'POST').upper(), 
-                    username_field=u, 
-                    password_field=p, 
-                    extra_fields={k:v for k,v in inputs.items() if k not in [u, p]},
-                    source_page=source
-                )
-                if not any(e.url == ep.url for e in self.endpoints):
-                    self.endpoints.append(ep)
+                self._add_ep(action, 'form_urlencoded', form.get('method', 'POST').upper(), u, p, {k:v for k,v in inputs.items() if k not in [u, p]}, source)
+
+        # 2. SPA/JS Heuristic: Look for Login-like inputs outside of forms
+        u_spa, p_spa = None, None
+        spa_inputs = {}
+        for inp in soup.find_all('input'):
+            name = inp.get('name') or inp.get('id')
+            if not name: continue
+            itype = (inp.get('type') or 'text').lower()
+            if itype == "password" or "pass" in name.lower(): p_spa = name
+            elif any(x in name.lower() for x in ["user", "email", "login"]): u_spa = name
+            spa_inputs[name] = ""
+
+        if u_spa and p_spa:
+            # For SPA targets, we audit the page itself as the auth gateway
+            self._add_ep(source, 'universal_json', 'POST', u_spa, p_spa, {}, source)
+
+    def _add_ep(self, url, auth_type, method, u, p, extra, source):
+        ep = AuthEndpoint(url, auth_type, method, u, p, extra, source)
+        if not any(e.url == ep.url for e in self.endpoints):
+            self.endpoints.append(ep)
 
 
 class BruteEngine:

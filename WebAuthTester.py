@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import sys
-from main import run_audit
 import asyncio
-from main import get_args
+from main import run_audit
 
 if __name__ == "__main__":
-    args = get_args()
-    asyncio.run(run_audit(args))
+    try:
+        asyncio.run(run_audit())
+    except KeyboardInterrupt:
+        sys.exit(0)
