@@ -62,8 +62,13 @@ async def run_audit():
         if not endpoints:
             print_error("No standard or SPA-style authentication gateways detected.")
             print_status("Initiating [bold yellow]Force-Discovery Mode[/bold yellow] (using target URL as universal gateway)...")
-            # Fallback: add the direct target as a universal JSON endpoint
-            discovery._add_ep(target, 'universal_json', 'POST', 'username', 'password', {}, target)
+            
+            # Map custom fields from config if available (e.g. for Firebase)
+            u_field = config.get('mapping', {}).get('username', 'username')
+            p_field = config.get('mapping', {}).get('password', 'password')
+            extra = config.get('mapping', {}).get('extra', {})
+            
+            discovery._add_ep(target, 'universal_json', 'POST', u_field, p_field, extra, target)
             endpoints = discovery.endpoints
 
         print_success(f"Proceeding with {len(endpoints)} authentication gateway(s).")

@@ -1,15 +1,23 @@
 # WebAuthTester Pro Configuration
-# Targeted Audit for Firebase SPA
+# Targeted Deep-Level Audit for Firebase Identity Toolkit
 
-target: "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyB..." # (Example Key)
-discovery_depth: 5
-max_crawl_time: 60
+target: "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyBmUxfxTLOaDGoTyzyQ06VKG59FIyB03iQ"
+discovery_depth: 1
+max_crawl_time: 30
 
-# Custom Wordlists for Test
+# Wordlists with your provided valid credentials
 wordlists:
   usernames: "wordlists/test_users.txt"
   passwords: "wordlists/test_pass.txt"
 
+# Performance & Stealth
 concurrency: 1
-timeout: 10
+timeout: 15
 proxy: null
+
+# Field Mapping for API Audits
+mapping:
+  username: "email"
+  password: "password"
+  extra:
+    returnSecureToken: True
