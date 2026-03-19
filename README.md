@@ -1,17 +1,3 @@
-# WebAuthTester Pro v2.2 🛡️
-
-[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Docker](https://img.shields.io/badge/docker-supported-blue.svg)](https://www.docker.com/)
-[![CI/CD](https://github.com/AbasSec/WebAuthTester/actions/workflows/tests.yml/badge.svg)](https://github.com/AbasSec/WebAuthTester/actions)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-
-**WebAuthTester Pro** is a high-concurrency, asynchronous authentication auditing framework. Designed for security researchers and enterprise-level penetration testing, it automates the discovery, security analysis, and credential validation of web authentication gateways using fuzzy-logic differential analysis.
-
----
-
-## 📸 Interface Preview
-
-```text
  __      __      ___.       _____         __  .__     
 /  \    /  \ ____\_ |__    /  _  \  __ ___/  |_|  |__  
 \   \/\/   // __ \| __ \  /  /_\  \|  |  \   __\  |  \ 
@@ -19,86 +5,136 @@
   \__/\  /  \___  >___  /\____|__  /____/ |__| |___|  /
        \/       \/    \/         \/                 \/ 
                  v2.2 - Enterprise Security Research Suite
+
+**WebAuthTester Pro** — Enterprise Automated Web Security Testing Framework
+Reconnaissance · Exploitation · Authorization · Intelligence
+
+A high-performance, asynchronous Python security framework for elite bug bounty hunters and red teams.
+
+---
+
+## 📋 Table of Contents
+- [Overview](#overview)
+- [Enterprise Features](#enterprise-features)
+- [Architecture](#architecture)
+- [Installation & Setup](#installation--setup)
+- [Usage Guide](#usage-guide)
+- [Professional Modules](#professional-modules)
+- [Reporting](#reporting)
+- [Legal & Ethics](#legal--ethics)
+
+---
+
+## 🔍 Overview
+**WebAuthTester Pro v2.2** is a comprehensive, Kali Linux-native offensive security framework designed for enterprise-scale authentication auditing. It implements an Intelligent Workflow Engine that automatically identifies authentication gateways, analyzes their behavior using fuzzy-logic, and executes high-concurrency credential validation.
+
+Target → Recon → Gateway Discovery → Baseline Analysis → Fuzzy-Logic Brute Audit → Final Report
+
+---
+
+## 🚀 Enterprise Features
+| Feature | Details |
+| :--- | :--- |
+| **Workflow Engine** | Stateful pipeline that chains discovery findings with active testing phases. |
+| **Async Performance** | Massive concurrency via `asyncio` for high-speed auditing with low memory footprint. |
+| **Gateway Discovery** | Multi-worker BFS crawler that identifies HTML forms, SPA components, and API endpoints. |
+| **Firebase Intelligence** | Built-in support for Google Identity Toolkit and modern serverless auth APIs. |
+| **Fuzzy-Logic Detection** | Uses Gestalt Pattern Matching to detect success via response similarity differentials. |
+| **WAF Evasion** | Configurable stealth modes with request jitter and randomized headers. |
+
+---
+
+## 🏗️ Architecture
+```text
+WebAuthTester/
+├── WebAuthTester.py          ← Main CLI Entry Point
+├── config.yaml               ← Global Scan Configuration
+├── main.py                   ← Orchestration Logic
+├── webauthtester/
+│   ├── core/
+│   │   ├── engine.py         ← Discovery & Brute Force Engines
+│   │   ├── models.py         ← Data Structures & Baselines
+│   │   └── utils.py          ← UI & Terminal Formatting
+├── wordlists/
+│   ├── usernames.txt         ← Optimized User Wordlist
+│   ├── passwords.txt         ← Optimized Password Wordlist
+│   └── test_pass.txt         ← Rapid Verification Wordlist
+└── tests/                    ← Integrated Pytest Suite
 ```
 
 ---
 
-## ✨ Enterprise-Grade Features
+## 🛠️ Installation & Setup
 
-- 🏗️ **Modular Architecture:** Clean, decoupled Python package structure for maximum extensibility.
-- 🚀 **Asynchronous Core:** Non-blocking I/O engine built on `asyncio` for high-speed concurrent auditing.
-- 🔍 **Universal Discovery:** Aggressive multi-worker BFS crawler that identifies HTML forms, modern SPA components, and "naked" input fields.
-- 🧠 **Firebase & API Intelligence:** Automatically detects and targets Google Identity Toolkit and other modern serverless authentication gateways.
-- 🧠 **Fuzzy-Logic Detection:** Uses **Gestalt Pattern Matching** to detect successful logins by analyzing response body similarity ratios.
-- 🛡️ **Security Configuration Audit:** Automated checks for HSTS, CSP, X-Frame-Options, CSRF, and SSL/TLS integrity.
-- 🐳 **Containerized Deployment:** Full Docker & Docker-Compose support for consistent environment execution.
-- 🧪 **Automated QA:** Integrated CI/CD pipeline via GitHub Actions with a comprehensive `pytest` suite.
-- 📝 **Professional Reporting:** Generates detailed Markdown and JSON reports for every audit session.
-
----
-
-## 🚀 Installation & Setup
-
-### Option 1: Docker (Recommended)
-Deploy instantly without managing local Python dependencies.
+### 1. Clone the Repository
 ```bash
-docker-compose up --build
+git clone https://github.com/AbasSec/WebAuthTester.git
+cd WebAuthTester
 ```
 
-### Option 2: Automated Setup (Linux/macOS)
-Creates a virtual environment and installs all dependencies automatically.
+### 2. Automated Environment Setup
+The `setup.sh` script creates a virtual environment, installs dependencies, and generates default wordlists.
 ```bash
 chmod +x setup.sh
 ./setup.sh
 ```
 
-### Option 3: Manual Installation
+### 3. Activate Environment (If using venv)
 ```bash
-pip install -r requirements.txt
-```
-
----
-
-## ⚙️ Configuration
-
-The tool supports professional configuration management via `config.yaml`. You can define targets, wordlists, concurrency, and proxy settings in one place.
-
-```yaml
-target: "https://example.com"
-concurrency: 20
-wordlists:
-  usernames: "wordlists/usernames.txt"
-  passwords: "wordlists/passwords.txt"
+source venv/bin/activate
 ```
 
 ---
 
 ## 📖 Usage Guide
 
-Run the tool using the wrapper or the main entry point:
-
+### Basic Audit
+Automatically discover forms and audit with default wordlists:
 ```bash
-# Basic Audit
-./WebAuthTester.py https://target.com
-
-# Audit with Proxy (e.g. Burp Suite)
-./WebAuthTester.py https://target.com -x http://127.0.0.1:8080
-
-# Audit with custom wordlists
-./WebAuthTester.py https://target.com -u users.txt -p pass.txt
+python3 WebAuthTester.py -t https://example.com
 ```
 
+### Targeted API Audit
+Directly target a specific API endpoint (e.g., Firebase) with custom wordlists:
+```bash
+python3 WebAuthTester.py -t "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=API_KEY" \
+  -u wordlists/test_users.txt \
+  -p wordlists/test_pass.txt
+```
+
+### Advanced Options
+- **Concurrency:** Increase speed with `-c` (Default: 10).
+- **Proxy:** Route traffic through Burp Suite with `-x http://127.0.0.1:8080`.
+- **Stealth:** Enable `--stealth` to add jitter and avoid rate-limiting.
+
 ---
 
-## 📊 Technical Reports & Documentation
+## 🧠 Professional Modules
 
-This repository includes high-level documentation suitable for academic and professional review:
+### 1. Discovery Engine
+The discovery module uses a recursive crawler to find:
+- Standard HTML `<form>` elements.
+- Modern SPA login components (React/Vue/Angular).
+- "Naked" input fields sitting directly in the DOM.
+- Hidden Firebase API configurations in Javascript files.
 
-1.  **[Technical Dissertation (Deep Dive)](RAPTOR-PRO_OFFICIAL_REPORT.md):** A detailed whitepaper covering the system's architecture, fuzzy-logic algorithms, and performance analysis.
-2.  **[Comprehensive Usage Guide](MODULES_USAGE_GUIDE.md):** A manual detailing every command-line argument and deployment scenario.
-3.  **Session Reports:** Every audit generates a timestamped report in the `reports/` directory (JSON/Markdown) detailing specific vulnerabilities found.
+### 2. Brute Force Engine
+Unlike standard tools that look for 302 redirects, our engine:
+1. **Captures a Baseline:** Sends a known-invalid request to map the failure response.
+2. **Fuzzy Matching:** Compares every attempt against the baseline using a similarity ratio.
+3. **Differential Analysis:** Identifies success when the response deviates significantly from the failure signature.
 
 ---
 
-## ⚖️ Disclaimer
-This tool is for **authorized security testing** and **educational purposes only**. Unauthorized use against targets without prior written consent is illegal. The developer assumes no liability for misuse.
+## 📊 Reporting
+At the end of every session, WebAuthTester Pro generates a professional summary in the terminal. Detailed findings including endpoint URLs, identified usernames, and valid passwords are displayed in a high-fidelity formatted table.
+
+---
+
+## ⚖️ Legal & Ethics
+**WebAuthTester Pro is for authorized security testing only.**
+
+Using this tool against systems without explicit written permission is illegal. The developers assume zero liability for unauthorized or malicious use.
+
+**WebAuthTester Pro v2.2 — Built for Elite Security Research**
+*AbasSec · Student of Cyber Security*

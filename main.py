@@ -21,13 +21,15 @@ def load_config(config_path="config.yaml"):
     return {}
 
 def get_args():
-    parser = argparse.ArgumentParser(description="WebAuthTester Pro - Enterprise Security Suite")
-    parser.add_argument("target", nargs="?", help="Target URL (e.g., https://example.com)")
+    parser = argparse.ArgumentParser(description="WebAuthTester Pro - Enterprise Security Research Suite")
+    parser.add_argument("-t", "--target", help="Target URL (e.g., https://example.com)")
     parser.add_argument("-u", "--userlist", help="Username wordlist")
     parser.add_argument("-p", "--passlist", help="Password wordlist")
     parser.add_argument("-c", "--concurrency", type=int, help="Concurrency level")
     parser.add_argument("-x", "--proxy", help="HTTP Proxy")
     parser.add_argument("--config", default="config.yaml", help="Path to config file")
+    parser.add_argument("--full-scan", action="store_true", help="Enable full enterprise audit")
+    parser.add_argument("--stealth", action="store_true", help="Enable stealth mode with jitter")
     return parser.parse_args()
 
 async def run_audit():
@@ -79,8 +81,8 @@ async def run_audit():
             print_status(f"Targeting: [bold cyan]{ep.url}[/bold cyan] ({ep.auth_type})")
             await brute.capture_baseline(ep)
 
-            users = [l.strip() for l in open(userlist).readlines() if l.strip()][:50]
-            passwords = [l.strip() for l in open(passlist).readlines() if l.strip()][:50]
+            users = [l.strip() for l in open(userlist).readlines() if l.strip()]
+            passwords = [l.strip() for l in open(passlist).readlines() if l.strip()]
 
             with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TaskProgressColumn(), console=console) as progress:
                 task = progress.add_task("[cyan]Auditing credentials...", total=len(users)*len(passwords))
