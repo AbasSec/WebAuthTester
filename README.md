@@ -90,24 +90,31 @@ source venv/bin/activate
 
 ## 📖 Usage Guide
 
+Running the tool without arguments displays the help menu and usage examples.
+
 ### Basic Audit
 Automatically discover forms and audit with default wordlists:
 ```bash
 python3 WebAuthTester.py -t https://example.com
 ```
 
-### Targeted API Audit
-Directly target a specific API endpoint (e.g., Firebase) with custom wordlists:
+### Targeted API Audit (Firebase / REST)
+Directly target a specific API endpoint with custom wordlists and intelligent JSON payload mapping:
 ```bash
 python3 WebAuthTester.py -t "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=API_KEY" \
   -u wordlists/test_users.txt \
   -p wordlists/test_pass.txt
 ```
 
+### Advanced Usage Examples
+- **High Speed Audit:** `python3 WebAuthTester.py -t https://target.com -c 50`
+- **Proxy via Burp Suite:** `python3 WebAuthTester.py -t https://target.com -x http://127.0.0.1:8080`
+- **Custom Config File:** `python3 WebAuthTester.py -t https://target.com --config my_audit.yaml`
+
 ### Advanced Options
 - **Concurrency:** Increase speed with `-c` (Default: 10).
-- **Proxy:** Route traffic through Burp Suite with `-x http://127.0.0.1:8080`.
-- **Stealth:** Enable `--stealth` to add jitter and avoid rate-limiting.
+- **Proxy:** Route traffic through a proxy with `-x`.
+- **Stealth:** Enable `--stealth` to add jitter and bypass behavioral WAFs.
 
 ---
 

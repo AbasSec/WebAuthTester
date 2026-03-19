@@ -20,7 +20,7 @@ def load_config(config_path="config.yaml"):
             return yaml.safe_load(f)
     return {}
 
-def get_args():
+async def run_audit():
     parser = argparse.ArgumentParser(description="WebAuthTester Pro - Enterprise Security Research Suite")
     parser.add_argument("-t", "--target", help="Target URL (e.g., https://example.com)")
     parser.add_argument("-u", "--userlist", help="Username wordlist")
@@ -30,10 +30,8 @@ def get_args():
     parser.add_argument("--config", default="config.yaml", help="Path to config file")
     parser.add_argument("--full-scan", action="store_true", help="Enable full enterprise audit")
     parser.add_argument("--stealth", action="store_true", help="Enable stealth mode with jitter")
-    return parser.parse_args()
-
-async def run_audit():
-    args = get_args()
+    
+    args = parser.parse_args()
     config = load_config(args.config)
     
     # Priority: CLI Args > Config File > Defaults
@@ -46,7 +44,11 @@ async def run_audit():
     show_banner()
     
     if not target:
-        print_error("No target specified. Provide a URL or set it in config.yaml.")
+        parser.print_help()
+        print("\n[bold yellow]Usage Examples:[/bold yellow]")
+        print("  python3 WebAuthTester.py -t https://example.com")
+        print("  python3 WebAuthTester.py -t https://target.com -u users.txt -p pass.txt")
+        print("  python3 WebAuthTester.py -t https://api.target.com/v1/login -c 20 -x http://127.0.0.1:8080")
         return
 
     if not os.path.exists(userlist) or not os.path.exists(passlist):
@@ -103,4 +105,9 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         sys.exit(0)
     except Exception as e:
-        print_error(f"Fatal error: {e}")
+        # Simple error print for cleaner CLI output on missing deps
+        if "rich" in str(e):
+             print(f"[!] Fatal error: {e}")
+        else:
+             from webauthtester.core.utils import print_error
+             print_error(f"Fatal error: {e}")
