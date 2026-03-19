@@ -36,15 +36,15 @@ except ImportError:
     HAS_RICH = False
 
 # --- Banner ---
-BANNER = r"""
- [bold red]__      __      ___. [bold white]                     __  .__   [/bold white]       [/bold red]
- [bold red]\ \    / / ____\_ |__ [bold white]  Context  _________|_ |_|  |__ [/bold white]       [/bold red]
- [bold red] \ \  / /_/ __ \| __ \[bold white]  Auditor  \____ \_  __ \  __\  |  \ [/bold white]      [/bold red]
- [bold red]  \ \/ / \  ___/| \_\ \[bold white]           |  |_> >  | \/|  | |   Y  \[/bold white]      [/bold red]
- [bold red]   \__/   \___  >___  /[bold white]   PRO     |   __/|__|   |__| |___|  /[/bold white]      [/bold red]
- [bold red]              \/    \/ [bold white]           |__|                   \/ [/bold white]       [/bold red]
+BANNER = r"""[bold red]
+ __      __      ___.       _____         __  .__     
+/  \    /  \ ____\_ |__    /  _  \  __ ___/  |_|  |__  
+\   \/\/   // __ \| __ \  /  /_\  \|  |  \   __\  |  \ 
+ \        /\  ___/| \_\ \/    |    \  |  /|  | |   Y  \
+  \__/\  /  \___  >___  /\____|__  /____/ |__| |___|  /
+       \/       \/    \/         \/                 \/ 
                  [italic white]v2.2 - Advanced Auth Auditing Suite[/italic white]
-"""
+[/bold red]"""
 
 # --- Dependency Management ---
 try:
