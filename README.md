@@ -98,12 +98,12 @@ Automatically discover forms and audit with default wordlists:
 python3 WebAuthTester.py -t https://example.com
 ```
 
-### Targeted API Audit (Firebase / REST)
+### Targeted API Audit (REST / JSON)
 Directly target a specific API endpoint with custom wordlists and intelligent JSON payload mapping:
 ```bash
-python3 WebAuthTester.py -t "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=API_KEY" \
-  -u wordlists/test_users.txt \
-  -p wordlists/test_pass.txt
+python3 WebAuthTester.py -t "https://api.example.com/v1/auth/login" \
+  -u wordlists/usernames.txt \
+  -p wordlists/passwords.txt
 ```
 
 ### Advanced Usage Examples
