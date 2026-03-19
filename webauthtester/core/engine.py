@@ -130,6 +130,12 @@ class DiscoveryEngine:
                 extra = {k: v for k, v in inputs.items() if k not in [u_field, p_field]}
                 self._add_ep(action, auth_type, method, u_field, p_field, extra, source)
 
+    def _is_internal(self, url: str) -> bool:
+        """Determines if a URL belongs to the target domain."""
+        try:
+            return urllib.parse.urlparse(url).netloc == urllib.parse.urlparse(self.target).netloc
+        except Exception: return False
+
     async def _extract_links(self, html, source):
         soup = BeautifulSoup(html, 'html.parser')
         # FIX: Find tags with EITHER href OR src
@@ -138,7 +144,7 @@ class DiscoveryEngine:
             if not val: continue
             
             n = urllib.parse.urljoin(source, val)
-            if urllib.parse.urlparse(n).netloc == urllib.parse.urlparse(self.target).netloc:
+            if self._is_internal(n):
                 await self.queue.put(n)
 
     def _extract_firebase(self, body, source):
