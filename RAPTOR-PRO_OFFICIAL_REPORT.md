@@ -133,7 +133,13 @@ For every authentication attempt:
 In multi-threaded tools (like Hydra), the OS must switch between thread contexts, which consumes CPU cycles and memory.
 WebAuthTester Pro uses **Non-blocking I/O**:
 - **The Event Loop:** A single thread handles thousands of connections. When a request is sent, the loop moves to the next task while waiting for the network socket to return data.
-- **Throughput:** WebAuthTester Pro can maintain 100+ concurrent requests with less than 50MB of RAM.
+- **Throughput:** WebAuthTester Pro can maintain 50+ concurrent authentication attempts on a standard machine with negligible CPU usage.
+
+### 7.2 Cross-Platform Environment Resilience
+Modern security environments (e.g., Kali Linux, Debian 12+) implement restrictive "Externally Managed Environments" (PEP 668). WebAuthTester Pro includes an adaptive setup engine that:
+1.  **Initial Strategy:** Attempts isolated `venv` creation.
+2.  **Fallback Strategy:** Detects failure and automatically shifts to user-level dependency injection (`--break-system-packages`).
+3.  **Result:** Ensures zero-friction deployment on any security-focused Linux distribution.
 
 ---
 

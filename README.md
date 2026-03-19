@@ -85,6 +85,7 @@ chmod +x setup.sh
 ```bash
 source venv/bin/activate
 ```
+*Note: If this fails with "No such file or directory", it means your system (e.g., Kali/Debian) prevented the venv creation. In this case, the setup script has already installed the dependencies to your user profile, and you can skip this step.*
 
 ---
 
