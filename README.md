@@ -43,18 +43,18 @@ cd WebAuthTester
 ```
 
 ### 2. Run the Setup Script
-The `setup.sh` script automatically installs dependencies and prepares the environment.
+The `setup.sh` script automatically installs dependencies.
 ```bash
 chmod +x setup.sh
 ./setup.sh
 ```
 
-### 3. Run the Tool
-On most systems (including Kali/Debian), the setup script installs dependencies directly. You can now execute the tool:
+### 3. Execute the Tool
+You can now run the tool directly. On Kali/Debian, dependencies are installed to your user profile automatically.
 ```bash
 python3 WebAuthTester.py -t https://example.com
 ```
-*Note: If the setup script successfully created a virtual environment, it will prompt you to activate it with `source venv/bin/activate` before running.*
+*(Optional: If a `venv` was created, run `source venv/bin/activate` before execution.)*
 
 ---
 
