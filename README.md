@@ -10,8 +10,10 @@
 
 ## ✨ Key Features
 
+- 🏗️ **Enterprise Architecture:** Fully modular package structure for maximum maintainability.
 - 🚀 **Asynchronous Engine:** High-concurrency BFS crawler and brute-force engine built on `asyncio`.
 - 🔍 **Intelligent Discovery:** Automatically maps HTML forms and heuristic API endpoints.
+- 🧪 **Unit Tested:** Includes a `pytest` suite for core engine validation.
 - 🧠 **Fuzzy Logic Detection:** Uses `SequenceMatcher` to identify successful logins by analyzing response body similarity.
 - 🛡️ **Security Audit:** Performs automated checks for SSL/TLS, Security Headers, and CSRF protection.
 - 📊 **Professional UI:** Rich terminal interface with ASCII art, progress bars, and formatted result tables.

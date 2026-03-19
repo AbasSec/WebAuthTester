@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "webauthtester-pro"
+version = "2.2.0"
+authors = [
+  { name="AbasSec Security", email="auditor@webauthtester.pro" },
+]
+description = "Enterprise-grade asynchronous authentication auditing suite."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Security",
+]
+dependencies = [
+    "aiohttp>=3.8.0",
+    "rich>=12.0.0",
+    "beautifulsoup4>=4.11.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/AbasSec/WebAuthTester"
+"Bug Tracker" = "https://github.com/AbasSec/WebAuthTester/issues"
+
+[project.scripts]
+webauthtester = "main:run_audit"
