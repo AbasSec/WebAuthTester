@@ -1,11 +1,13 @@
 """
 WebAuth Utils - UI components and terminal formatting.
+
+This module leverages the 'rich' library to provide a professional,
+colorized, and structured command-line interface for the framework.
 """
 
-import random
+from typing import List, Tuple
 from rich.console import Console
 from rich.table import Table
-from rich.panel import Panel
 
 console = Console()
 
@@ -19,30 +21,36 @@ BANNER = r"""[bold red]
                  [italic white]v2.2 - Enterprise Security Research Suite[/italic white]
 [/bold red]"""
 
-def show_banner():
+def show_banner() -> None:
     """Displays the stylized application banner."""
     console.print(BANNER)
 
-def print_error(msg: str):
-    """Prints a formatted error message."""
+def print_error(msg: str) -> None:
+    """Prints a formatted critical error message."""
     console.print(f"[bold red][!] {msg}[/bold red]")
 
-def print_status(msg: str):
-    """Prints a formatted status message."""
+def print_status(msg: str) -> None:
+    """Prints a formatted informational status message."""
     console.print(f"[bold blue][*] {msg}[/bold blue]")
 
-def print_success(msg: str):
+def print_success(msg: str) -> None:
     """Prints a formatted success message."""
     console.print(f"[bold green][+] {msg}[/bold green]")
 
-def display_results(results: list):
-    """Renders the final results in a professional table."""
+def display_results(results: List[Tuple[str, str, str]]) -> None:
+    """
+    Renders the final credential audit results in a professional data table.
+    
+    Args:
+        results (List[Tuple[str, str, str]]): A list of tuples containing
+            (Endpoint URL, Username, Password) for successful authentications.
+    """
     if not results:
         console.print("[yellow][*] Audit complete. No valid credentials found.[/yellow]")
         return
 
     table = Table(title="[bold green]VALID CREDENTIALS IDENTIFIED[/bold green]", border_style="green")
-    table.add_column("Endpoint", style="cyan")
+    table.add_column("Endpoint", style="cyan", no_wrap=True)
     table.add_column("Username", style="white")
     table.add_column("Password", style="bold red")
 
