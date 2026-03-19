@@ -90,6 +90,63 @@ class DiscoveryEngine:
                 if urllib.parse.urlparse(n).netloc == urllib.parse.urlparse(self.target).netloc:
                     await self.queue.put(n)
 
+    async def _extract_bs4(self, html, source):
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # 1. Aggressive Form Discovery (Standard & SPA)
+        forms = soup.find_all('form')
+        
+        # Heuristic: If no forms, look for <div> or <section> containing password inputs
+        if not forms:
+            wrappers = soup.find_all(['div', 'section', 'main'])
+            for wrap in wrappers:
+                if wrap.find('input', {'type': 'password'}):
+                    forms.append(wrap)
+
+        for form in forms:
+            # Determine Action (Default to current page for SPAs)
+            action = urllib.parse.urljoin(source, form.get('action') or source)
+            method = (form.get('method') or 'POST').upper()
+            
+            u_field, p_field = None, None
+            inputs = {}
+            
+            # Extract all interactive elements
+            for inp in form.find_all(['input', 'textarea', 'select']):
+                # Capture both Name and ID (modern apps often use ID)
+                name = inp.get('name') or inp.get('id')
+                if not name: continue
+                
+                itype = (inp.get('type') or 'text').lower()
+                
+                # Logic: Identify Password Field
+                if itype == "password" or "pass" in name.lower() or "pwd" in name.lower():
+                    p_field = name
+                # Logic: Identify Username/Email Field
+                elif any(x in name.lower() for x in ["user", "email", "login", "id"]):
+                    u_field = name
+                
+                inputs[name] = inp.get('value') or ''
+
+            # If we identified a pair, add it
+            if u_field and p_field:
+                self._add_ep(action, 'universal_json' if not form.name == 'form' else 'form_urlencoded', method, u_field, p_field, {k:v for k,v in inputs.items() if k not in [u_field, p_field]}, source)
+
+        # 2. Universal Page Search (Global Catch-all)
+        # This catches "naked" inputs sitting directly in the body
+        all_pwd = soup.find_all('input', {'type': 'password'})
+        for p_inp in all_pwd:
+            p_name = p_inp.get('name') or p_inp.get('id')
+            # Look for the nearest text/email input before it
+            prev_inputs = p_inp.find_all_previous('input', limit=5)
+            for u_inp in prev_inputs:
+                u_name = u_inp.get('name') or u_inp.get('id')
+                if not u_name: continue
+                itype = (u_inp.get('type') or 'text').lower()
+                if any(x in u_name.lower() for x in ["user", "email", "login", "id"]):
+                    self._add_ep(source, 'universal_json', 'POST', u_name, p_name, {}, source)
+                    break
+
     def _extract_firebase(self, body, source):
         api_key_m = re.search(r'apiKey\s*:\s*["\']([^"\']+)["\']', body)
         if api_key_m:
