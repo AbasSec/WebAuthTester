@@ -76,14 +76,16 @@ WebAuthTester Pro solves these by decoupling the request lifecycle from the succ
 
 The CDE is responsible for mapping the authentication surface area of the target.
 
-### 4.1. Asynchronous BFS Crawling
+### 4.1. Asynchronous BFS Crawling & Deep JS Extraction
 The crawler uses an `asyncio.Queue` to manage URLs. This ensures a "Breadth-First" approach, prioritizing shallow, likely login pages before diving into deep directory structures.
-- **Concurrency Control:** Managed via a worker-pool pattern, allowing multiple pages to be fetched and parsed in parallel without race conditions.
+- **Deep JS Extraction:** The engine recursively fetches and parses linked `.js` files to identify hardcoded Firebase API keys and other serverless authentication configuration strings.
+- **Concurrency Control:** Managed via a worker-pool pattern, allowing multiple pages and script files to be fetched and parsed in parallel without race conditions.
 
-### 4.2. API Heuristic Detection
-Unlike standard crawlers, the CDE looks for "Invisible" authentication endpoints:
-- **Heuristic A:** Scanning JS blobs for `fetch()` or `XMLHttpRequest` calls targeting `/auth`, `/login`, or `/token`.
-- **Heuristic B:** Identifying JSON keys like `u_name`, `p_word`, `jwt`, and `bearer` in the page source, signaling a `universal_json` endpoint.
+### 4.2. Universal Discovery & API Heuristics
+WebAuthTester Pro implements aggressive identification of non-standard authentication entry points:
+- **Heuristic A (Universal Parsing):** Beyond standard `<form>` tags, the engine identifies ID-based input fields within `<div>` or `<section>` containers, supporting modern SPA architectures.
+- **Heuristic B (Global Page Search):** A catch-all heuristic that pairs "naked" password fields with preceding username/email inputs sititng directly in the page body.
+- **Heuristic C (API Logic):** Identifying JSON keys like `u_name`, `p_word`, `jwt`, and `bearer` in the page source, signaling a `universal_json` endpoint.
 
 ---
 

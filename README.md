@@ -27,7 +27,8 @@
 
 - 🏗️ **Modular Architecture:** Clean, decoupled Python package structure for maximum extensibility.
 - 🚀 **Asynchronous Core:** Non-blocking I/O engine built on `asyncio` for high-speed concurrent auditing.
-- 🔍 **Intelligent Discovery:** Multi-worker BFS crawler that identifies HTML forms and "invisible" API endpoints.
+- 🔍 **Universal Discovery:** Aggressive multi-worker BFS crawler that identifies HTML forms, modern SPA components, and "naked" input fields.
+- 🧠 **Firebase & API Intelligence:** Automatically detects and targets Google Identity Toolkit and other modern serverless authentication gateways.
 - 🧠 **Fuzzy-Logic Detection:** Uses **Gestalt Pattern Matching** to detect successful logins by analyzing response body similarity ratios.
 - 🛡️ **Security Configuration Audit:** Automated checks for HSTS, CSP, X-Frame-Options, CSRF, and SSL/TLS integrity.
 - 🐳 **Containerized Deployment:** Full Docker & Docker-Compose support for consistent environment execution.
