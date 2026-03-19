@@ -1,23 +1,15 @@
 # WebAuthTester Pro Configuration
-# Professional Enterprise Research Suite
+# Targeted Audit for Firebase SPA
 
-# Target Settings
-target: "https://example.com"
-discovery_depth: 50
-max_crawl_time: 300
+target: "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyB..." # (Example Key)
+discovery_depth: 5
+max_crawl_time: 60
 
-# Wordlist Paths
+# Custom Wordlists for Test
 wordlists:
-  usernames: "wordlists/usernames.txt"
-  passwords: "wordlists/passwords.txt"
+  usernames: "wordlists/test_users.txt"
+  passwords: "wordlists/test_pass.txt"
 
-# Performance & Stealth
-concurrency: 10
-timeout: 15
+concurrency: 1
+timeout: 10
 proxy: null
-user_agent: "random"  # Use 'random' or a specific UA string
-
-# Reporting
-output_dir: "reports"
-generate_json: true
-generate_markdown: true

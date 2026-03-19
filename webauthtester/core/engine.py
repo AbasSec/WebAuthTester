@@ -62,54 +62,39 @@ class DiscoveryEngine:
                 async with self.session.get(url, headers={'User-Agent': get_random_ua()}, proxy=self.proxy, timeout=10) as resp:
                     if resp.status != 200: continue
                     body = await resp.text(errors='ignore')
+                    
                     if HAS_BS4: await self._extract_bs4(body, url)
                     
-                    if "text/html" in resp.headers.get("Content-Type", ""):
+                    content_type = resp.headers.get("Content-Type", "").lower()
+                    if "text/html" in content_type:
                         await self._find_links(body, url)
+                    
+                    # Heuristic for Firebase even in JS files
+                    if "application/javascript" in content_type or url.endswith(".js") or "text/html" in content_type:
+                        if 'apiKey' in body and 'authDomain' in body:
+                            self._extract_firebase(body, url)
             except Exception: pass
             finally: self.queue.task_done()
 
     async def _find_links(self, html, source):
         if HAS_BS4:
-            links = [l.get('href') for l in BeautifulSoup(html, 'html.parser').find_all('a', href=True)]
-            for l in links:
-                n = urllib.parse.urljoin(source, l)
+            soup = BeautifulSoup(html, 'html.parser')
+            # 1. Standard Links
+            for link in soup.find_all('a', href=True):
+                n = urllib.parse.urljoin(source, link.get('href'))
+                if urllib.parse.urlparse(n).netloc == urllib.parse.urlparse(self.target).netloc:
+                    await self.queue.put(n)
+            # 2. Script Files (Deep Crawl)
+            for script in soup.find_all('script', src=True):
+                n = urllib.parse.urljoin(source, script.get('src'))
                 if urllib.parse.urlparse(n).netloc == urllib.parse.urlparse(self.target).netloc:
                     await self.queue.put(n)
 
-    async def _extract_bs4(self, html, source):
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        # 1. Standard Form Extraction
-        for form in soup.find_all('form'):
-            action = urllib.parse.urljoin(source, form.get('action') or source)
-            u, p = None, None
-            inputs = {}
-            for inp in form.find_all(['input', 'textarea', 'select']):
-                name = inp.get('name') or inp.get('id')
-                if not name: continue
-                itype = (inp.get('type') or 'text').lower()
-                if itype == "password" or "pass" in name.lower(): p = name
-                elif any(x in name.lower() for x in ["user", "email", "login"]): u = name
-                inputs[name] = inp.get('value') or ''
-            
-            if u and p:
-                self._add_ep(action, 'form_urlencoded', form.get('method', 'POST').upper(), u, p, {k:v for k,v in inputs.items() if k not in [u, p]}, source)
-
-        # 2. SPA/JS Heuristic: Look for Login-like inputs outside of forms
-        u_spa, p_spa = None, None
-        spa_inputs = {}
-        for inp in soup.find_all('input'):
-            name = inp.get('name') or inp.get('id')
-            if not name: continue
-            itype = (inp.get('type') or 'text').lower()
-            if itype == "password" or "pass" in name.lower(): p_spa = name
-            elif any(x in name.lower() for x in ["user", "email", "login"]): u_spa = name
-            spa_inputs[name] = ""
-
-        if u_spa and p_spa:
-            # For SPA targets, we audit the page itself as the auth gateway
-            self._add_ep(source, 'universal_json', 'POST', u_spa, p_spa, {}, source)
+    def _extract_firebase(self, body, source):
+        api_key_m = re.search(r'apiKey\s*:\s*["\']([^"\']+)["\']', body)
+        if api_key_m:
+            firebase_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key_m.group(1)}"
+            self._add_ep(firebase_url, 'universal_json', 'POST', 'email', 'password', {"returnSecureToken": True}, source)
 
     def _add_ep(self, url, auth_type, method, u, p, extra, source):
         ep = AuthEndpoint(url, auth_type, method, u, p, extra, source)
