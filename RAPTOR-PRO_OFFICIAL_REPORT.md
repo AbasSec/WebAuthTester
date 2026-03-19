@@ -1,185 +1,101 @@
-# WebAuthTester Pro v2.0: Comprehensive Technical Dissertation 📜
+# WebAuthTester Pro v2.5: Advanced Offensive Security Dissertation 📜
 
-**Title:** WebAuthTester Pro - An Advanced Asynchronous Framework for Web Authentication Auditing  
-**Version:** 2.0  
+**Title:** WebAuthTester Pro - A Plugin-Based Asynchronous Framework for Web Authentication Auditing  
+**Version:** 2.5 (Enterprise Build)  
 **Status:** Official Technical Whitepaper / Research Documentation  
-**Author:** [Your Name / Final Year Project Submission]  
-**Field:** Cyber Security / Information Assurance / Web Application Penetration Testing  
+**Author:** AbasSec  
+**Field:** Cyber Security / Application Security Research / Red Teaming  
 
 ---
 
 ## 📋 Table of Contents
 1.  [Executive Summary](#1-executive-summary)
-2.  [Introduction & Problem Statement](#2-introduction--problem-statement)
-3.  [System Architecture & Design Patterns](#3-system-architecture--design-patterns)
-4.  [Module Deep-Dive: Discovery Engine (CDE)](#4-module-deep-dive-discovery-engine-cde)
-5.  [Module Deep-Dive: Security Configuration Auditor (SCA)](#5-module-deep-dive-security-configuration-auditor-sca)
-6.  [Methodology: The Differential Response Modeling (DRM) Algorithm](#6-methodology-the-differential-response-modeling-drm-algorithm)
-7.  [Performance Analysis: Asynchronous I/O vs. Multi-Threading](#7-performance-analysis-asynchronous-io-vs-multi-threading)
-8.  [Vulnerability Mapping (OWASP & CWE)](#8-vulnerability-mapping-owasp--cwe)
-9.  [Detailed Remediation Strategies](#9-detailed-remediation-strategies)
-10. [Conclusion & Future Research Directions](#10-conclusion--future-research-directions)
-11. [References](#11-references)
+2.  [System Architecture: The Plugin Paradigm](#2-system-architecture--the-plugin-paradigm)
+3.  [Stateful Authentication: CSRF & Session Isolation](#3-stateful-authentication--csrf--session-isolation)
+4.  [Attack Methodologies: Brute Force vs. Credential Stuffing](#4-attack-methodologies--brute-force-vs-credential-stuffing)
+5.  [OAuth2 & SSO Detection Surface](#5-oauth2--sso-detection-surface)
+6.  [Vulnerability Classification (CWE & CVSS)](#6-vulnerability-classification--cwe--cvss)
+7.  [Docker Hardening & DevSecOps](#7-docker-hardening--devsecops)
+8.  [Conclusion & Future Directions](#8-conclusion--future-directions)
 
 ---
 
 ## 1. Executive Summary
-**WebAuthTester Pro** is a high-performance security framework designed to automate the discovery and vulnerability assessment of web authentication infrastructures. By moving away from synchronous, status-code-dependent testing, it implements an event-driven asynchronous model and a proprietary fuzzy-logic success detection engine. This report details the technical implementation, algorithmic logic, and security implications of the framework.
+**WebAuthTester Pro v2.5** is an evolved asynchronous framework that transitions from traditional, monolithic auditing to a **Provider-Based Architecture**. By leveraging isolated authentication modules, the framework handles the complexities of stateful modern web applications, including CSRF rotation and session tracking. This version introduces industry-standard vulnerability mapping using CWE and CVSS.
 
 ---
 
-## 2. Introduction & Problem Statement
-The modern web has transitioned from static HTML forms to dynamic, API-driven Single-Page Applications (SPAs). Traditional security tools often fail because:
-- **Status Code Ambiguity:** Many modern APIs return `200 OK` for both successful and failed logins, using JSON body content to signal state.
-- **Dynamic Content:** Anti-CSRF tokens and session IDs change response bodies, breaking simple string-match detection.
-- **Network Latency:** Synchronous tools suffer from "Head-of-Line" blocking, where one slow response stalls the entire audit.
+## 2. System Architecture: The Plugin Paradigm
 
-WebAuthTester Pro solves these by decoupling the request lifecycle from the success-detection logic.
+WebAuthTester Pro v2.5 employs an **Interface-Driven Design** pattern. All authentication handlers implement a common `AuthModule` abstract base class.
 
----
-
-## 3. System Architecture & Design Patterns
-
-### 3.1. Architectural Overview (ASCII)
+### 2.1. Architectural Workflow
 ```text
-[ TARGET URL ]
-      |
-      v
-+-----------------------+      +-------------------------+
-| Discovery Engine (CDE)| ---> | Security Auditor (SCA)  |
-| - BFS Crawler         |      | - Header Analysis       |
-| - API Heuristics      |      | - Transport Audit       |
-+-----------+-----------+      +------------+------------+
-            |                               |
-            v                               v
-+-----------------------+      +-------------------------+
-| Brute Force Engine    | <--- | Baseline Modeler (BM)   |
-| - Async Concurrency   |      | - Failed Login Signature|
-| - Fuzzy Detection     |      | - Similarity Thresholds |
-+-----------+-----------+      +-------------------------+
-            |
-            v
-+---------------------------------------+
-| Multi-Format Reporting (Markdown/JSON)|
-+---------------------------------------+
+[ TARGET ] -> [ CRAWLER ] -> [ HTML / JS ] 
+                                  |
+            +---------------------+---------------------+
+            v                     v                     v
+    [ FormAuthModule ]    [ JSONAuthModule ]    [ OAuthDetection ]
+            |                     |                     |
+            +---------------------+---------------------+
+                                  |
+            [ BruteEngine (Orchestrator w/ Semaphore) ]
+                                  |
+            [ Structured Reporting (CWE/CVSS Mapping) ]
 ```
 
-### 3.2. Technical Stack
-- **Runtime:** Python 3.10+
-- **HTTP Engine:** `aiohttp` (Asynchronous HTTP Client/Server)
-- **DOM Parser:** `BeautifulSoup4` (LXML/HTML5lib)
-- **UI Engine:** `Rich` (Terminal Formatting & Progress Management)
+---
+
+## 3. Stateful Authentication: CSRF & Session Isolation
+
+Modern web applications use stateful mechanisms to prevent automated attacks. Version 2.5 addresses this through two primary mechanisms:
+
+### 3.1. Per-Request CSRF Refresh
+The `FormAuthModule` performs a pre-request "probe" of the source page to extract high-entropy tokens (e.g., `csrf_token`, `authenticity_token`). This token is then dynamically injected into the subsequent authentication payload.
+
+### 3.2. Absolute Session Isolation
+To prevent cookie bleed and server-side tracking, every authentication attempt utilizes a fresh `aiohttp.CookieJar` and `ClientSession`. This ensures that a lockout warning on attempt #1 does not affect attempt #2.
 
 ---
 
-## 4. Module Deep-Dive: Discovery Engine (CDE)
+## 4. Attack Methodologies: Brute Force vs. Credential Stuffing
 
-The CDE is responsible for mapping the authentication surface area of the target.
-
-### 4.1. Asynchronous BFS Crawling & Deep JS Extraction
-The crawler uses an `asyncio.Queue` to manage URLs. This ensures a "Breadth-First" approach, prioritizing shallow, likely login pages before diving into deep directory structures.
-- **Deep JS Extraction:** The engine recursively fetches and parses linked `.js` files to identify hardcoded Firebase API keys and other serverless authentication configuration strings.
-- **Concurrency Control:** Managed via a worker-pool pattern, allowing multiple pages and script files to be fetched and parsed in parallel without race conditions.
-
-### 4.2. Universal Discovery & API Heuristics
-WebAuthTester Pro implements aggressive identification of non-standard authentication entry points:
-- **Heuristic A (Universal Parsing):** Beyond standard `<form>` tags, the engine identifies ID-based input fields within `<div>` or `<section>` containers, supporting modern SPA architectures.
-- **Heuristic B (Global Page Search):** A catch-all heuristic that pairs "naked" password fields with preceding username/email inputs sititng directly in the page body.
-- **Heuristic C (API Logic):** Identifying JSON keys like `u_name`, `p_word`, `jwt`, and `bearer` in the page source, signaling a `universal_json` endpoint.
+WebAuthTester Pro now supports multiple attack taxonomies:
+- **Pure Brute Force:** A full cartesian product (Users $\times$ Passwords).
+- **Credential Stuffing (`--stuffing`):** A 1:1 pairing of lists, reflecting real-world leaks where specific username-password pairs are already known.
 
 ---
 
-## 5. Module Deep-Dive: Security Configuration Auditor (SCA)
+## 5. OAuth2 & SSO Detection Surface
 
-The SCA performs a passive audit of the discovered endpoints to identify configuration weaknesses.
-
-### 5.1. Secure Header Analysis
-The tool audits for the "Big Five" security headers:
-1.  **Strict-Transport-Security (HSTS):** Prevents SSL stripping.
-2.  **Content-Security-Policy (CSP):** Mitigates XSS and data injection.
-3.  **X-Frame-Options (XFO):** Prevents Clickjacking (UI Redressing).
-4.  **X-Content-Type-Options:** Prevents MIME-sniffing.
-5.  **Referrer-Policy:** Controls how much referrer information is leaked.
-
-### 5.2. CSRF Detection Logic
-The tool uses a recursive DOM search to find hidden inputs. It checks for tokens that satisfy the following entropy requirements:
-- **Name Match:** `csrf`, `xsrf`, `_token`, `nonce`.
-- **Value Persistence:** (Planned) Checking if the token changes per session.
+The `OAuthDetectionModule` identifies modern authentication flows that are typically out of scope for automated brute force:
+- **Indicators:** `/oauth/authorize`, `.well-known/openid-configuration`, `SAMLRequest`.
+- **Reporting:** These are flagged as "Authentication Discovery" findings, notifying the auditor of the underlying architecture.
 
 ---
 
-## 6. Methodology: The Differential Response Modeling (DRM) Algorithm
+## 6. Vulnerability Classification (CWE & CVSS)
 
-The DRM is the core innovation that makes WebAuthTester Pro "intelligent."
+Findings are now tagged with industry-standard identifiers to improve professionalism in reporting.
 
-### 6.1. The Similarity Equation
-The tool uses the **Gestalt Pattern Matching** algorithm to calculate a similarity ratio ($R$):
-$$R = \frac{2 \times M}{T}$$
-Where:
-- $M$ = Number of matching characters.
-- $T$ = Total number of characters in both responses.
-
-### 6.2. Decision Logic Flow
-For every authentication attempt:
-1.  **Status Change?** If `Response.Status != Baseline.Status` and `Status` is a success code (e.g., 302) -> **SUCCESS**.
-2.  **Fuzzy Match?** If `Similarity(Response.Body, Baseline.Body) < 0.85` -> **POTENTIAL SUCCESS**.
-3.  **Keyword Verification:** Check the body for "invalid", "error", or "fail". If absent and similarity is low -> **CONFIRMED SUCCESS**.
-
----
-
-## 7. Performance Analysis: Asynchronous I/O vs. Multi-Threading
-
-### 7.1. Context Switching Overhead
-In multi-threaded tools (like Hydra), the OS must switch between thread contexts, which consumes CPU cycles and memory.
-WebAuthTester Pro uses **Non-blocking I/O**:
-- **The Event Loop:** A single thread handles thousands of connections. When a request is sent, the loop moves to the next task while waiting for the network socket to return data.
-- **Throughput:** WebAuthTester Pro can maintain 50+ concurrent authentication attempts on a standard machine with negligible CPU usage.
-
-### 7.2 Cross-Platform Environment Resilience
-Modern security environments (e.g., Kali Linux, Debian 12+) implement restrictive "Externally Managed Environments" (PEP 668). WebAuthTester Pro includes an adaptive setup engine that:
-1.  **Initial Strategy:** Attempts isolated `venv` creation.
-2.  **Fallback Strategy:** Detects failure and automatically shifts to user-level dependency injection (`--break-system-packages`).
-3.  **Result:** Ensures zero-friction deployment on any security-focused Linux distribution.
-
----
-
-## 8. Vulnerability Mapping (OWASP & CWE)
-
-| CWE ID | Vulnerability Name | OWASP Category | Tool Detection Method |
+| CWE ID | Vulnerability Name | CVSS | Remediation |
 | :--- | :--- | :--- | :--- |
-| **CWE-319** | Cleartext Transmission | A02:2021-Cryptographic Failures | Transport Audit (Non-HTTPS URL) |
-| **CWE-521** | Weak Password Policy | A07:2021-Auth Failures | Brute-Force Success |
-| **CWE-204** | Response Discrepancy | A07:2021-Auth Failures | Username Enumeration Logic |
-| **CWE-352** | Cross-Site Request Forgery | A01:2021-Broken Access Control | Heuristic CSRF Input Check |
-| **CWE-1021** | Clickjacking | A05:2021-Security Misconfig | Missing X-Frame-Options Header |
+| **CWE-307** | Improper Restriction of Attempts | 7.5 | Implement progressive delays or MFA. |
+| **CWE-352** | Cross-Site Request Forgery | 8.1 | Use Anti-CSRF tokens or SameSite cookies. |
+| **CWE-1000** | Authentication Discovery | 0.0 | Informational: OAuth2 detected. |
 
 ---
 
-## 9. Detailed Remediation Strategies
+## 7. Docker Hardening & DevSecOps
 
-For every vulnerability identified, the tool provides industry-standard fix-actions:
-
-- **Cleartext Transmission:** Implement TLS 1.3 and enforce a 301 Redirect from HTTP to HTTPS. Use the `Secure` flag on all cookies.
-- **Missing Security Headers:** Update web server configurations (Nginx/Apache) to include:
-  ```nginx
-  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-  add_header X-Frame-Options "SAMEORIGIN";
-  ```
-- **Broken Authentication:** Implement Multi-Factor Authentication (MFA) and account lockout policies after 5 failed attempts.
+Version 2.5 implements a production-ready containerization strategy:
+- **Multi-Stage Builds:** Separates the build environment from the runtime environment, resulting in a minimal attack surface.
+- **Least Privilege:** The container runs as a non-root `auditor` user, preventing container escape from granting host root access.
 
 ---
 
-## 10. Conclusion & Future Research Directions
-WebAuthTester Pro demonstrates that modern authentication auditing requires a departure from simple status-code checks. By leveraging asynchronous I/O and fuzzy similarity matching, the tool provides a high-fidelity security assessment.
+## 8. Conclusion & Future Directions
 
-**Future Work:**
-- **NLP Analysis:** Using Natural Language Processing to better classify error messages.
-- **CAPTCHA Bypass:** Researching OCR-based automated solving for low-complexity CAPTCHAs.
+The move to a modular architecture has transformed WebAuthTester Pro into a professional-grade security tool. Future research will focus on automated JWT (JSON Web Token) vulnerability analysis and Headless Browser integration for complex JavaScript-heavy login flows.
 
----
-
-## 11. References
-1. PortSwigger. (2024). *Authentication vulnerabilities*. Web Security Academy.
-2. MITRE. (2024). *CWE-204: Observable Response Discrepancy*.
-3. Fowler, M. (2024). *Patterns of Enterprise Application Architecture*.
-4. aiohttp Project. (2024). *Asynchronous HTTP Client/Server for Python*.
+**AbasSec · Student of Cyber Security**

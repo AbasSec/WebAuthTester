@@ -30,6 +30,8 @@ class AuthEndpoint:
     password_field: str
     extra_fields: Dict[str, str] = field(default_factory=dict)
     source_page: Optional[str] = None
+    is_oauth: bool = False
+    csrf_field: Optional[str] = None
 
 @dataclass
 class AuthBaseline:
@@ -52,20 +54,14 @@ class AuthBaseline:
 class SecurityFinding:
     """
     Represents a generalized security weakness or vulnerability.
-    
-    Attributes:
-        type (str): The category of the finding (e.g., 'Misconfiguration', 'Cleartext').
-        title (str): A human-readable title.
-        severity (str): The CVSS-aligned severity (e.g., 'High', 'Medium').
-        description (str): Detailed explanation of the flaw.
-        remediation (str): Recommended steps to fix the issue.
-        evidence (Dict): Data supporting the finding.
-        timestamp (datetime): When the finding was identified.
     """
     type: str
     title: str
     severity: str
+    cwe: str
+    cvss_score: float
     description: str
     remediation: str
+    endpoint: str
     evidence: Dict = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)

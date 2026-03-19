@@ -37,6 +37,25 @@ def print_success(msg: str) -> None:
     """Prints a formatted success message."""
     console.print(f"[bold green][+] {msg}[/bold green]")
 
+from .models import SecurityFinding
+
+def display_findings(findings: List[SecurityFinding]) -> None:
+    """Renders discovered security vulnerabilities in a professional table."""
+    if not findings:
+        return
+
+    table = Table(title="[bold yellow]SECURITY VULNERABILITIES IDENTIFIED[/bold yellow]", border_style="yellow", expand=True)
+    table.add_column("Finding", style="white")
+    table.add_column("Endpoint", style="cyan")
+    table.add_column("Severity", style="bold red")
+    table.add_column("CWE", style="magenta")
+
+    for f in findings:
+        table.add_row(f.title, f.endpoint, f.severity, f.cwe)
+    
+    console.print("\n")
+    console.print(table)
+
 def display_results(results: List[Tuple[str, str, str]]) -> None:
     """
     Renders the final credential audit results in a professional data table.

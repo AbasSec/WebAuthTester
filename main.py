@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 """
 WebAuthTester Pro - Main Entry Point.
-
-This module orchestrates the entire security auditing process, coordinating 
-the DiscoveryEngine and BruteEngine, handling user input, and managing 
-asynchronous tasks.
 """
 
 import asyncio
@@ -14,11 +10,24 @@ import os
 import sys
 import yaml
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Tuple, List
 from textwrap import dedent
 
 from webauthtester.core.engine import DiscoveryEngine, BruteEngine
-from webauthtester.core.utils import show_banner, print_error, print_status, print_success, display_results, console
+from webauthtester.core.utils import (
+    show_banner, print_error, print_status, print_success, 
+    display_results, display_findings, console
+)
+
+# Configure proper logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler('webauthtester.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Try to import Rich for professional progress bars
 try:
@@ -26,9 +35,6 @@ try:
     HAS_RICH = True
 except ImportError:
     HAS_RICH = False
-
-# Configure root logger to prevent third-party library spam
-logging.basicConfig(level=logging.ERROR)
 
 def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
     """Loads operational configuration from a YAML file."""
@@ -40,13 +46,13 @@ def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
             print_error(f"Failed to parse config.yaml: {e}")
     return {}
 
-def parse_arguments() -> argparse.Namespace:
+def parse_arguments() -> Tuple[argparse.ArgumentParser, argparse.Namespace]:
     """Parses command-line arguments and provides professional usage examples."""
     usage_examples = dedent("""
         [bold yellow]Usage Examples:[/bold yellow]
           python3 WebAuthTester.py -t https://example.com
           python3 WebAuthTester.py -t https://target.com -u users.txt -p pass.txt
-          python3 WebAuthTester.py -t https://api.target.com/v1/login -c 20 -x http://127.0.0.1:8080
+          python3 WebAuthTester.py --stuffing -t https://target.com
           python3 WebAuthTester.py --stealth -t https://protected-site.com
     """)
 
@@ -61,46 +67,46 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("-p", "--passlist", type=str, help="Path to password wordlist")
     parser.add_argument("-c", "--concurrency", type=int, help="Concurrency level (default: 10)")
     parser.add_argument("-x", "--proxy", type=str, help="HTTP Proxy (e.g., http://127.0.0.1:8080)")
+    parser.add_argument("-o", "--output", type=str, help="Save findings to JSON/CSV (e.g., results.json)")
     parser.add_argument("--config", type=str, default="config.yaml", help="Path to configuration file")
     parser.add_argument("--full-scan", action="store_true", help="Enable exhaustive enterprise audit")
     parser.add_argument("--stealth", action="store_true", help="Enable stealth mode with randomized jitter")
+    parser.add_argument("--stuffing", action="store_true", help="Pair users and passwords 1:1 (Credential Stuffing)")
     
-    return parser.parse_args()
+    return parser, parser.parse_args()
 
 async def run_audit() -> None:
     """Main orchestration function for the security audit."""
-    args = parse_arguments()
+    parser, args = parse_arguments()
     config = load_config(args.config)
     
-    # Priority Resolution: CLI arguments override Config File settings
-    target = args.target or config.get('target')
+    target_raw = args.target or config.get('target')
+    target = str(target_raw) if target_raw else None
+    
     userlist = args.userlist or config.get('wordlists', {}).get('usernames', 'wordlists/usernames.txt')
     passlist = args.passlist or config.get('wordlists', {}).get('passwords', 'wordlists/passwords.txt')
     concurrency = args.concurrency or config.get('concurrency', 10)
     proxy = args.proxy or config.get('proxy')
+    stealth = args.stealth or config.get('stealth', False)
+    stuffing = args.stuffing or config.get('stuffing', False)
+    output_file = args.output or config.get('output')
 
     show_banner()
     
     if not target:
-        # Re-initialize parser just to print help dynamically without exiting
-        parse_arguments()._get_kwargs()
-        # Hacky but clean way to show help
-        print_error("No target specified. Use -t or define a target in config.yaml.")
-        print("\nRun `python3 WebAuthTester.py -h` for usage instructions.")
+        parser.print_help()
+        print_error("\nNo target specified. Use -t or define a target in config.yaml.")
         return
 
     if not os.path.exists(userlist) or not os.path.exists(passlist):
         print_error(f"Wordlists missing. Checked paths: {userlist}, {passlist}")
-        print_status("Please run `./setup.sh` or specify valid paths using -u and -p.")
         return
 
     print_status(f"Initializing Enterprise Audit for: [bold white]{target}[/bold white]")
 
-    # Create a unified async session for all HTTP requests
     connector = aiohttp.TCPConnector(ssl=False)
     async with aiohttp.ClientSession(connector=connector) as session:
         
-        # --- PHASE 1: DISCOVERY ---
         discovery = DiscoveryEngine(session, target, proxy=proxy)
         if HAS_RICH:
             with console.status("[bold green]Crawling target and parsing DOM for entry points...") as status:
@@ -109,34 +115,17 @@ async def run_audit() -> None:
             print_status("Crawling target for entry points...")
             endpoints = await discovery.run()
 
-        # Fallback to Universal Discovery if no standard forms are identified
-        if not endpoints:
-            print_error("No standard HTML forms or SPA routing components detected.")
-            print_status("Initiating [bold yellow]Force-Discovery Mode[/bold yellow] (targeting root as universal gateway)...")
-            
-            # Map custom JSON payload structure if targeting an API
-            u_field = config.get('mapping', {}).get('username', 'username')
-            p_field = config.get('mapping', {}).get('password', 'password')
-            extra = config.get('mapping', {}).get('extra', {})
-            
-            discovery._add_ep(target, 'universal_json', 'POST', u_field, p_field, extra, target)
-            endpoints = discovery.endpoints
-
         print_success(f"Discovered and mapped {len(endpoints)} authentication gateway(s).")
 
-        # --- PHASE 2: DIFFERENTIAL BRUTE FORCE ---
-        brute = BruteEngine(session, concurrency, proxy)
+        brute = BruteEngine(session, concurrency, proxy, stealth=stealth)
         
         for ep in endpoints:
             print_status(f"Targeting Endpoint: [bold cyan]{ep.url}[/bold cyan] (Type: {ep.auth_type})")
             
-            # 1. Establish Failure Baseline
             await brute.capture_baseline(ep)
-            if ep.url not in brute.baselines:
-                print_error("Failed to capture baseline. Endpoint may be dead or WAF protected. Skipping.")
+            if ep.url not in brute.baselines and not ep.is_oauth:
                 continue
 
-            # 2. Load Wordlists
             try:
                 with open(userlist, 'r', encoding='utf-8') as fu:
                     users = [line.strip() for line in fu if line.strip()]
@@ -146,9 +135,15 @@ async def run_audit() -> None:
                 print_error(f"Error reading wordlists: {e}")
                 return
 
-            total_attempts = len(users) * len(passwords)
+            if stuffing:
+                pairs = list(zip(users, passwords))
+                print_status(f"Stuffing Mode: [bold yellow]ON[/bold yellow]. Pairs: {len(pairs)}")
+            else:
+                pairs = [(u, p) for u in users for p in passwords]
+                print_status(f"Brute Mode: [bold cyan]ON[/bold cyan]. Combinations: {len(pairs)}")
+
+            total_attempts = len(pairs)
             
-            # 3. Execute High-Concurrency Auditing
             if HAS_RICH:
                 with Progress(
                     SpinnerColumn(),
@@ -157,40 +152,48 @@ async def run_audit() -> None:
                     TaskProgressColumn(),
                     console=console
                 ) as progress:
-                    task = progress.add_task("[cyan]Auditing credentials...", total=total_attempts)
-                    for u in users:
-                        for p in passwords:
-                            if brute.rate_limited:
-                                break
-                            await brute.test(ep, u, p)
-                            progress.update(task, advance=1)
+                    task_p = progress.add_task("[cyan]Auditing credentials...", total=total_attempts)
+                    
+                    async def track_task(u, p):
+                        if brute.rate_limited:
+                            return
+                        await brute.test(ep, u, p)
+                        progress.update(task_p, advance=1)
+
+                    tasks = [track_task(u, p) for u, p in pairs]
+                    await asyncio.gather(*tasks)
             else:
                 print_status(f"Auditing credentials... ({total_attempts} combinations)")
-                for u in users:
-                    for p in passwords:
-                        if brute.rate_limited:
-                            break
-                        await brute.test(ep, u, p)
+                tasks = [brute.test(ep, u, p) for u, p in pairs]
+                await asyncio.gather(*tasks)
             
             if brute.rate_limited:
-                print_error("Security Response Triggered: Rate Limit (HTTP 429/403) detected. Aborting endpoint audit.")
+                print_error("Security Response Triggered: Rate Limit detected. Aborted endpoint audit.")
 
-        # --- PHASE 3: REPORTING ---
+        display_findings(brute.findings)
         display_results(brute.results)
+        
+        if output_file and (brute.results or brute.findings):
+            try:
+                import json
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    res = [{"url": r[0], "username": r[1], "password": r[2]} for r in brute.results]
+                    finds = [f.__dict__ for f in brute.findings]
+                    for fin in finds:
+                        if 'timestamp' in fin: fin['timestamp'] = fin['timestamp'].isoformat()
+                    out = {"credentials": res, "vulnerabilities": finds}
+                    json.dump(out, f, indent=4)
+                print_success(f"Full report exported to: [bold white]{output_file}[/bold white]")
+            except Exception as e:
+                print_error(f"Failed to save output: {e}")
 
 if __name__ == "__main__":
-    # Ensure Windows compatibility for asyncio if necessary
     if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-        
     try:
         asyncio.run(run_audit())
     except KeyboardInterrupt:
-        print("\n[!] Audit interrupted by user. Exiting gracefully.")
         sys.exit(0)
     except Exception as e:
-        if HAS_RICH:
-            console.print(f"[bold red]Fatal Error:[/bold red] {str(e)}")
-        else:
-            print(f"Fatal Error: {e}")
+        print(f"Fatal Error: {e}")
         sys.exit(1)

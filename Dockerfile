@@ -1,29 +1,23 @@
-# Use a slim Python image for efficiency
-FROM python:3.10-slim
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# Set work directory
+# STAGE 1: BUILDER
+FROM python:3.12-slim AS builder
 WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    python3-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Copy project
+# STAGE 2: RUNTIME
+FROM python:3.12-slim
+RUN useradd -m auditor
+USER auditor
+WORKDIR /home/auditor/app
+
+# Copy installed packages from builder
+COPY --from=builder /root/.local /home/auditor/.local
+ENV PATH=/home/auditor/.local/bin:$PATH
+
+# Copy application source
 COPY . .
 
-# Make the tool executable
-RUN chmod +x main.py WebAuthTester.py
+# Ensure wordlists directory exists for volume mounting
+RUN mkdir -p wordlists
 
-# Default command
 ENTRYPOINT ["python3", "main.py"]
