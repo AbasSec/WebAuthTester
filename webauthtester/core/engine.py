@@ -51,6 +51,12 @@ class DiscoveryEngine:
         for w in workers: w.cancel()
         return self.endpoints
 
+    def _is_internal(self, url: str) -> bool:
+        """Determines if a URL belongs to the target domain."""
+        try:
+            return urllib.parse.urlparse(url).netloc == urllib.parse.urlparse(self.target).netloc
+        except Exception: return False
+
     async def _worker(self):
         while True:
             url = await self.queue.get()
