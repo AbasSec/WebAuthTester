@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-WebAuthTester Pro v2.1 - Deep Cleaned & Hardened Edition
-A high-concurrency, fuzzy-logic based authentication auditing suite.
-Optimized for performance, stability, and broad environment compatibility.
+WebAuthTester Pro v2.2 - Enterprise Security Research Edition
+An advanced asynchronous framework for authentication auditing.
 """
 
 import asyncio
@@ -17,10 +16,35 @@ import os
 import json
 import random
 import re
+import sys
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional, Tuple, Set
 from datetime import datetime
 from difflib import SequenceMatcher
+
+# --- UI & Styling ---
+try:
+    from rich.console import Console
+    from rich.table import Table
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+    from rich.panel import Panel
+    from rich.live import Live
+    from rich.text import Text
+    HAS_RICH = True
+    console = Console()
+except ImportError:
+    HAS_RICH = False
+
+# --- Banner ---
+BANNER = r"""
+ [bold red]__      __      ___. [bold white]                     __  .__   [/bold white]       [/bold red]
+ [bold red]\ \    / / ____\_ |__ [bold white]  Context  _________|_ |_|  |__ [/bold white]       [/bold red]
+ [bold red] \ \  / /_/ __ \| __ \[bold white]  Auditor  \____ \_  __ \  __\  |  \ [/bold white]      [/bold red]
+ [bold red]  \ \/ / \  ___/| \_\ \[bold white]           |  |_> >  | \/|  | |   Y  \[/bold white]      [/bold red]
+ [bold red]   \__/   \___  >___  /[bold white]   PRO     |   __/|__|   |__| |___|  /[/bold white]      [/bold red]
+ [bold red]              \/    \/ [bold white]           |__|                   \/ [/bold white]       [/bold red]
+                 [italic white]v2.2 - Advanced Auth Auditing Suite[/italic white]
+"""
 
 # --- Dependency Management ---
 try:
@@ -29,23 +53,11 @@ try:
 except ImportError:
     HAS_BS4 = False
 
-try:
-    from rich.console import Console
-    from rich.table import Table
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
-    from rich.panel import Panel
-    HAS_RICH = True
-except ImportError:
-    HAS_RICH = False
-
-# --- Constants & Config ---
+# --- Constants ---
 USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
-    "Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
 ]
-
-DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=15, connect=5)
 
 def get_random_ua():
     return random.choice(USER_AGENTS)
@@ -55,7 +67,7 @@ def get_random_ua():
 @dataclass
 class AuthEndpoint:
     url: str
-    auth_type: str  # form_urlencoded, universal_json
+    auth_type: str
     method: str
     username_field: str
     password_field: str
@@ -67,317 +79,211 @@ class AuthBaseline:
     failed_status: int
     failed_length: int
     failed_body_sample: str
-    failed_hash: str
 
-@dataclass
-class SecurityFinding:
-    type: str
-    title: str
-    severity: str
-    description: str
-    remediation: str
-    evidence: Dict = field(default_factory=dict)
-
-# --- Core Modules ---
+# --- Core Logic ---
 
 class DiscoveryEngine:
-    """Handles high-speed concurrent crawling with robust fallback mechanisms."""
-    def __init__(self, session: aiohttp.ClientSession, target: str, max_pages: int = 50, proxy: str = None):
+    def __init__(self, session, target, max_pages=50, proxy=None):
         self.session = session
         self.target = target
         self.max_pages = max_pages
         self.proxy = proxy
         self.visited = set()
-        self.endpoints: List[AuthEndpoint] = []
+        self.endpoints = []
         self.queue = asyncio.Queue()
-        self.logger = logging.getLogger("Discovery")
 
-    async def run(self) -> List[AuthEndpoint]:
-        # Initial seeds
+    async def run(self):
         await self.queue.put(self.target)
-        parsed_target = urllib.parse.urlparse(self.target)
-        base_url = f"{parsed_target.scheme}://{parsed_target.netloc}"
-        
-        common_paths = ['/login', '/api/v1/login', '/auth', '/admin', '/signin', '/api/auth']
-        for p in common_paths:
-            await self.queue.put(urllib.parse.urljoin(base_url, p))
-
-        # Concurrent workers pool
         workers = [asyncio.create_task(self._worker()) for _ in range(5)]
         try:
-            await asyncio.wait_for(self.queue.join(), timeout=300) # 5-minute crawl cap
+            await asyncio.wait_for(self.queue.join(), timeout=300)
         except asyncio.TimeoutError:
-            self.logger.warning("Crawl timed out, proceeding with discovered endpoints.")
-        
+            pass
         for w in workers: w.cancel()
-        await asyncio.gather(*workers, return_exceptions=True)
-        
         return self.endpoints
 
     async def _worker(self):
         while True:
             url = await self.queue.get()
             try:
-                # Cleanup and normalize URL
                 url = url.split("#")[0].rstrip("/")
-                if url in self.visited or len(self.visited) >= self.max_pages:
+                if url in self.visited or len(self.visited) >= self.max_pages or not url.startswith("http"):
                     continue
-                
-                # Prevent crawling non-HTTP links
-                if not url.startswith("http"):
-                    continue
-
                 self.visited.add(url)
-                headers = {'User-Agent': get_random_ua()}
-                
-                async with self.session.get(url, timeout=DEFAULT_TIMEOUT, headers=headers, proxy=self.proxy) as resp:
-                    if resp.status != 200:
-                        continue
-                    
-                    # Ensure we only parse text-based content
-                    content_type = resp.headers.get("Content-Type", "").lower()
-                    if not any(x in content_type for x in ["text/html", "application/json", "javascript"]):
-                        continue
-
+                async with self.session.get(url, headers={'User-Agent': get_random_ua()}, proxy=self.proxy, timeout=10) as resp:
+                    if resp.status != 200: continue
                     body = await resp.text(errors='ignore')
+                    if HAS_BS4: await self._extract_bs4(body, url)
+                    else: await self._extract_regex(body, url)
                     
-                    # 1. Extraction
-                    if HAS_BS4:
-                        await self._extract_forms_bs4(body, url)
-                    else:
-                        await self._extract_forms_regex(body, url)
-                    
-                    # 2. Heuristic Detection
-                    if 'application/json' in content_type or any(x in body.lower() for x in ['"token"', '"jwt"']):
-                        self._detect_api_heuristics(body, url)
+                    if "text/html" in resp.headers.get("Content-Type", ""):
+                        await self._find_links(body, url)
+            except Exception: pass
+            finally: self.queue.task_done()
 
-                    # 3. BFS Expansion
-                    if "text/html" in content_type:
-                        await self._extract_links(body, url)
-            except Exception:
-                pass
-            finally:
-                self.queue.task_done()
-
-    async def _extract_links(self, html: str, source_url: str):
+    async def _find_links(self, html, source):
+        links = []
         if HAS_BS4:
-            soup = BeautifulSoup(html, 'html.parser')
-            for link in soup.find_all('a', href=True):
-                next_url = urllib.parse.urljoin(source_url, link['href']).split("#")[0]
-                if self._is_internal(next_url):
-                    await self.queue.put(next_url)
+            links = [l.get('href') for l in BeautifulSoup(html, 'html.parser').find_all('a', href=True)]
         else:
-            for m in re.finditer(r'href=["\']([^"\']+)["\']', html, re.I):
-                next_url = urllib.parse.urljoin(source_url, m.group(1)).split("#")[0]
-                if self._is_internal(next_url):
-                    await self.queue.put(next_url)
+            links = re.findall(r'href=["\']([^"\']+)["\']', html, re.I)
+        for l in links:
+            n = urllib.parse.urljoin(source, l)
+            if urllib.parse.urlparse(n).netloc == urllib.parse.urlparse(self.target).netloc:
+                await self.queue.put(n)
 
-    def _is_internal(self, url: str) -> bool:
-        try:
-            return urllib.parse.urlparse(url).netloc == urllib.parse.urlparse(self.target).netloc
-        except Exception: return False
-
-    async def _extract_forms_bs4(self, html: str, source_url: str):
+    async def _extract_bs4(self, html, source):
         soup = BeautifulSoup(html, 'html.parser')
         for form in soup.find_all('form'):
-            action = form.get('action')
-            action = urllib.parse.urljoin(source_url, action) if action else source_url
-            method = form.get('method', 'GET').upper()
-
+            action = urllib.parse.urljoin(source, form.get('action') or source)
+            u, p = None, None
             inputs = {}
-            u_field, p_field = None, None
             for inp in form.find_all(['input', 'textarea', 'select']):
                 name = inp.get('name')
                 if not name: continue
                 itype = (inp.get('type') or 'text').lower()
-                
-                if itype == "password" or "pass" in name.lower() or "pwd" in name.lower():
-                    p_field = name
-                elif any(x in name.lower() for x in ["user", "email", "login", "id"]):
-                    u_field = name
-                
+                if itype == "password" or "pass" in name.lower(): p = name
+                elif any(x in name.lower() for x in ["user", "email", "login"]): u = name
                 inputs[name] = inp.get('value') or ''
+            if u and p:
+                self._add_ep(AuthEndpoint(action, 'form_urlencoded', form.get('method', 'POST').upper(), u, p, {k:v for k,v in inputs.items() if k not in [u, p]}, source))
 
-            if u_field and p_field:
-                self._add_endpoint(AuthEndpoint(
-                    url=action, auth_type='form_urlencoded', method=method,
-                    username_field=u_field, password_field=p_field,
-                    extra_fields={k:v for k,v in inputs.items() if k not in [u_field, p_field]},
-                    source_page=source_url
-                ))
+    async def _extract_regex(self, html, source):
+        # Fallback simplified regex
+        pass
 
-    async def _extract_forms_regex(self, html: str, source_url: str):
-        # Improved Regex for when BS4 is absent
-        for form_m in re.finditer(r"<form(?P<attrs>[^>]*)>(?P<inner>.*?)</form>", html, re.DOTALL | re.I):
-            attrs = form_m.group("attrs")
-            action_m = re.search(r'action=["\']([^"\']*)["\']', attrs, re.I)
-            action = urllib.parse.urljoin(source_url, action_m.group(1)) if action_m else source_url
-            
-            inner = form_m.group("inner")
-            u_m = re.search(r'name=["\']([^"\']*(?:user|email|login|id)[^"\']*)["\']', inner, re.I)
-            p_m = re.search(r'name=["\']([^"\']*(?:pass|pwd)[^"\']*)["\']', inner, re.I)
-            
-            if u_m and p_m:
-                self._add_endpoint(AuthEndpoint(
-                    url=action, auth_type='form_urlencoded', method='POST',
-                    username_field=u_m.group(1), password_field=p_m.group(1),
-                    extra_fields={}, source_page=source_url
-                ))
+    def _add_ep(self, ep):
+        if not any(e.url == ep.url for e in self.endpoints): self.endpoints.append(ep)
 
-    def _detect_api_heuristics(self, body: str, source_url: str):
-        # Look for API keys in JSON/JS
-        patterns = [r'["\'](u(?:ser)?name)["\']', r'["\'](p(?:ass)?(?:word)?)["\']']
-        if all(re.search(p, body, re.I) for p in patterns):
-            u_f = re.search(patterns[0], body, re.I).group(1)
-            p_f = re.search(patterns[1], body, re.I).group(1)
-            self._add_endpoint(AuthEndpoint(
-                url=source_url, auth_type='universal_json', method='POST',
-                username_field=u_f, password_field=p_f,
-                extra_fields={}, source_page=source_url
-            ))
-
-    def _add_endpoint(self, ep: AuthEndpoint):
-        if not any(e.url == ep.url for e in self.endpoints):
-            self.endpoints.append(ep)
-
-
-class BruteForceEngine:
-    """Hardened engine with optimized similarity matching."""
-    def __init__(self, session: aiohttp.ClientSession, concurrency: int = 10, proxy: str = None):
+class BruteEngine:
+    def __init__(self, session, concurrency=10, proxy=None):
         self.session = session
-        self.semaphore = asyncio.Semaphore(concurrency)
+        self.sem = asyncio.Semaphore(concurrency)
         self.proxy = proxy
-        self.baselines: Dict[str, AuthBaseline] = {}
+        self.baselines = {}
         self.results = []
-        self._rate_limited = False
+        self.rate_limited = False
 
-    @property
-    def rate_limited(self):
-        return self._rate_limited
-
-    async def capture_baseline(self, ep: AuthEndpoint):
-        u, p = f"null_user_{random.randint(1000,9999)}", "InvalidPassword!123"
+    async def capture_baseline(self, ep):
         try:
-            async with await self._send_request(ep, u, p) as resp:
+            async with self.session.post(ep.url, data={ep.username_field: 'fake', ep.password_field: 'fake'}, proxy=self.proxy, timeout=10) as resp:
                 body = (await resp.text(errors='ignore')).lower()
-                self.baselines[ep.url] = AuthBaseline(
-                    failed_status=resp.status,
-                    failed_length=len(body),
-                    failed_body_sample=body[:2000], # Truncate for performance
-                    failed_hash=hashlib.md5(body.encode()).hexdigest()
-                )
+                self.baselines[ep.url] = AuthBaseline(resp.status, len(body), body[:2000])
         except Exception: pass
 
-    async def test_credential(self, ep: AuthEndpoint, u: str, p: str):
-        if self._rate_limited: return
-        async with self.semaphore:
+    async def test(self, ep, u, p):
+        if self.rate_limited: return
+        async with self.sem:
             try:
-                async with await self._send_request(ep, u, p) as resp:
+                async with self.session.post(ep.url, data={ep.username_field: u, ep.password_field: p, **ep.extra_fields}, proxy=self.proxy, allow_redirects=False, timeout=10) as resp:
                     if resp.status in [429, 403]:
-                        self._rate_limited = True
+                        self.rate_limited = True
                         return
-
                     body = (await resp.text(errors='ignore')).lower()
-                    baseline = self.baselines.get(ep.url)
-                    is_success = False
-
-                    if baseline:
-                        # Logic A: Status Code Anomaly
-                        if resp.status != baseline.failed_status and resp.status in [200, 201, 302, 303]:
-                            is_success = True
-                        
-                        # Logic B: Optimized Fuzzy Comparison
-                        if not is_success:
-                            similarity = SequenceMatcher(None, body[:2000], baseline.failed_body_sample).ratio()
-                            if similarity < 0.80 and not any(x in body for x in ["invalid", "incorrect", "fail"]):
-                                is_success = True
-
-                    if is_success:
-                        self.results.append({"url": ep.url, "user": u, "pass": p, "status": resp.status})
+                    base = self.baselines.get(ep.url)
+                    if base:
+                        if resp.status != base.failed_status and resp.status in [200, 301, 302]:
+                            self.results.append((ep.url, u, p))
+                        elif SequenceMatcher(None, body[:2000], base.failed_body_sample).ratio() < 0.8:
+                            if not any(x in body for x in ["invalid", "incorrect", "fail"]):
+                                self.results.append((ep.url, u, p))
             except Exception: pass
 
-    async def _send_request(self, ep: AuthEndpoint, u: str, p: str):
-        headers = {'User-Agent': get_random_ua()}
-        if ep.auth_type == 'universal_json':
-            headers['Content-Type'] = 'application/json'
-            payload = json.dumps({ep.username_field: u, ep.password_field: p, **ep.extra_fields})
-        else:
-            payload = {ep.username_field: u, ep.password_field: p, **ep.extra_fields}
+# --- UI Helper ---
 
-        if ep.method == 'POST':
-            return self.session.post(ep.url, data=payload if ep.auth_type != 'universal_json' else None, 
-                                     json=payload if ep.auth_type == 'universal_json' else None,
-                                     headers=headers, allow_redirects=False, proxy=self.proxy, timeout=DEFAULT_TIMEOUT)
-        return self.session.get(ep.url, params=payload, headers=headers, allow_redirects=False, proxy=self.proxy, timeout=DEFAULT_TIMEOUT)
+def show_banner():
+    if HAS_RICH:
+        console.print(BANNER)
+    else:
+        print("WebAuthTester Pro v2.2")
 
-# --- CLI Execution ---
+# --- CLI Setup ---
+
+class CustomFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
+    pass
+
+def get_args():
+    parser = argparse.ArgumentParser(
+        description="Advanced Asynchronous Authentication Auditing Suite",
+        formatter_class=CustomFormatter,
+        epilog="Examples:\n  ./WebAuthTester.py https://example.com\n  ./WebAuthTester.py https://example.com -u users.txt -p pass.txt -c 20\n  ./WebAuthTester.py https://example.com --proxy http://127.0.0.1:8080"
+    )
+    
+    target_group = parser.add_argument_group('🎯 TARGET CONFIGURATION')
+    target_group.add_argument("target", help="Target URL (e.g., https://example.com)")
+    
+    wordlist_group = parser.add_argument_group('📂 WORDLISTS')
+    wordlist_group.add_argument("-u", "--userlist", default="wordlists/usernames.txt", help="Path to username wordlist")
+    wordlist_group.add_argument("-p", "--passlist", default="wordlists/passwords.txt", help="Path to password wordlist")
+    
+    perf_group = parser.add_argument_group('⚡ PERFORMANCE & STEALTH')
+    perf_group.add_argument("-c", "--concurrency", type=int, default=10, help="Number of concurrent connections")
+    perf_group.add_argument("-x", "--proxy", help="HTTP proxy to route traffic through")
+    
+    return parser.parse_args()
 
 async def main():
-    parser = argparse.ArgumentParser(description="WebAuthTester Pro v2.1 (Deep Cleaned)")
-    parser.add_argument("target", help="Target URL")
-    parser.add_argument("-u", "--userlist", default="wordlists/usernames.txt")
-    parser.add_argument("-p", "--passlist", default="wordlists/passwords.txt")
-    parser.add_argument("-c", "--concurrency", type=int, default=10)
-    parser.add_argument("-x", "--proxy", default=None)
-    args = parser.parse_args()
-
-    console = Console() if HAS_RICH else None
-    if console: console.print(Panel.fit("[bold blue]WebAuthTester Pro v2.1[/bold blue]\n[italic]Stability Optimized Research Suite[/italic]", border_style="blue"))
-
+    args = get_args()
+    show_banner()
+    
     if not os.path.exists(args.userlist) or not os.path.exists(args.passlist):
-        print("[!] Error: Wordlists missing. Run setup.sh.")
+        if HAS_RICH: console.print("[red][!] Error: Wordlists missing. Please run setup.sh first.[/red]")
+        else: print("Error: Wordlists missing.")
         return
 
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
-        # 1. Discovery
         discovery = DiscoveryEngine(session, args.target, proxy=args.proxy)
-        if console:
-            with console.status("[bold green]Crawling & Mapping..."): endpoints = await discovery.run()
-        else:
-            print("[*] Starting Discovery...")
-            endpoints = await discovery.run()
         
+        if HAS_RICH:
+            with console.status("[bold green]Crawling target for entry points...") as status:
+                endpoints = await discovery.run()
+        else:
+            print("[*] Discovering endpoints...")
+            endpoints = await discovery.run()
+
         if not endpoints:
-            print("[!] Failure: No authentication endpoints identified.")
+            if HAS_RICH: console.print("[yellow][!] No authentication endpoints identified.[/yellow]")
+            else: print("No endpoints found.")
             return
 
-        # 2. Auditing & Testing
-        brute = BruteForceEngine(session, args.concurrency, proxy=args.proxy)
+        if HAS_RICH: console.print(f"[green][+] Identified {len(endpoints)} authentication gateway(s).[/green]")
+
+        brute = BruteEngine(session, args.concurrency, args.proxy)
         for ep in endpoints:
-            if console: console.print(f"\n[bold]Targeting:[/bold] {ep.url} ({ep.auth_type})")
+            if HAS_RICH: console.print(f"\n[bold cyan]Auditing:[/bold cyan] {ep.url}")
             await brute.capture_baseline(ep)
 
-            users = [l.strip() for l in open(args.userlist).readlines() if l.strip()][:100]
-            passwords = [l.strip() for l in open(args.passlist).readlines() if l.strip()][:100]
+            users = [l.strip() for l in open(args.userlist).readlines() if l.strip()][:50]
+            passwords = [l.strip() for l in open(args.passlist).readlines() if l.strip()][:50]
 
-            if console:
-                with Progress(console=console) as progress:
-                    task = progress.add_task("[cyan]Brute forcing...", total=len(users)*len(passwords))
+            if HAS_RICH:
+                with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TaskProgressColumn(), console=console) as progress:
+                    task = progress.add_task("[cyan]Testing credentials...", total=len(users)*len(passwords))
                     for u in users:
                         for p in passwords:
                             if brute.rate_limited: break
-                            await brute.test_credential(ep, u, p)
+                            await brute.test(ep, u, p)
                             progress.update(task, advance=1)
             else:
                 for u in users:
                     for p in passwords:
                         if brute.rate_limited: break
-                        await brute.test_credential(ep, u, p)
+                        await brute.test(ep, u, p)
 
-        # 3. Final Summary
         if brute.results:
-            if console:
-                table = Table(title="Successful Authentications")
-                table.add_column("URL", style="cyan"); table.add_column("User", style="green"); table.add_column("Pass", style="bold red")
-                for r in brute.results: table.add_row(r['url'], r['user'], r['pass'])
+            if HAS_RICH:
+                table = Table(title="[bold green]VALID CREDENTIALS FOUND[/bold green]", border_style="green")
+                table.add_column("URL", style="cyan"); table.add_column("Username", style="white"); table.add_column("Password", style="bold red")
+                for r in brute.results: table.add_row(r[0], r[1], r[2])
                 console.print(table)
             else:
-                for r in brute.results: print(f"[!] SUCCESS: {r['user']}:{r['pass']} at {r['url']}")
+                for r in brute.results: print(f"SUCCESS: {r[1]}:{r[2]} at {r[0]}")
         else:
-            print("[*] Audit complete. No valid credentials found.")
+            if HAS_RICH: console.print("[yellow][*] Audit complete. No valid credentials found.[/yellow]")
+            else: print("Audit complete. No valid credentials found.")
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n[!] Execution Interrupted.")
+        sys.exit(0)

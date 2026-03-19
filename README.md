@@ -1,36 +1,87 @@
-# WebAuthTester Pro v2.0 🛡️
+# WebAuthTester Pro v2.2 🛡️
 
-**WebAuthTester Pro** is an advanced, high-concurrency authentication auditing suite designed for security researchers and academic projects. It automates the discovery, security analysis, and brute-force testing of web-based authentication systems.
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-Educational-green.svg)](LICENSE)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/AbasSec/WebAuthTester/graphs/commit-activity)
 
-Built with a modular asynchronous architecture, it handles everything from deep crawling and API heuristic detection to fuzzy-logic-based success identification.
+**WebAuthTester Pro** is a high-performance, asynchronous authentication auditing suite designed for security researchers. It automates the discovery, configuration auditing, and credential testing of web-based authentication gateways.
 
-## 🚀 Features
+---
 
-- **Concurrent Discovery Engine:** High-speed BFS crawler that identifies HTML forms and JSON-based API endpoints.
-- **Security Auditor:** Performs real-time checks for missing security headers (HSTS, CSP, XFO), CSRF vulnerabilities, and insecure credential transmission.
-- **Fuzzy Success Detection:** Uses `SequenceMatcher` to detect successful logins by comparing response similarity, bypassing dynamic content hurdles.
-- **Username Enumeration:** Detects logic flaws (CWE-204) by analyzing response differences between valid and invalid users.
-- **Proxy Support:** Seamless integration with Burp Suite and OWASP ZAP for traffic interception and manual analysis.
-- **Academic Reporting:** Generates detailed Markdown and JSON reports suitable for academic submissions and technical audits.
+## ✨ Key Features
 
-## 🛠️ Quick Start
+- 🚀 **Asynchronous Engine:** High-concurrency BFS crawler and brute-force engine built on `asyncio`.
+- 🔍 **Intelligent Discovery:** Automatically maps HTML forms and heuristic API endpoints.
+- 🧠 **Fuzzy Logic Detection:** Uses `SequenceMatcher` to identify successful logins by analyzing response body similarity.
+- 🛡️ **Security Audit:** Performs automated checks for SSL/TLS, Security Headers, and CSRF protection.
+- 📊 **Professional UI:** Rich terminal interface with ASCII art, progress bars, and formatted result tables.
+- 📝 **Dual Reporting:** Generates comprehensive Markdown and JSON reports for documentation.
+
+---
+
+## 📸 Interface Preview
+
+```text
+ __      __      ___.                       __  .__          
+\ \    / / ____\_ |__   Context  _________|_ |_|  |__        
+ \ \  / /_/ __ \| __ \  Auditor  \____ \_  __ \  __\  |  \       
+  \ \/ / \  ___/| \_\ \           |  |_> >  | \/|  | |   Y  \      
+   \__/   \___  >___  /   PRO     |   __/|__|   |__| |___|  /      
+              \/    \/            |__|                   \/        
+                 v2.2 - Advanced Auth Auditing Suite
+```
+
+---
+
+## 🚀 Installation & Setup
 
 ### 1. Automated Setup
 ```bash
+git clone https://github.com/AbasSec/WebAuthTester.git
+cd WebAuthTester
 chmod +x setup.sh
 ./setup.sh
 ```
 
-### 2. Run an Audit
+### 2. Manual Installation
 ```bash
-./WebAuthTester.py https://target-website.com
+pip install aiohttp rich beautifulsoup4
 ```
 
-## 📋 Requirements
-- Python 3.8+
-- `aiohttp` (Async HTTP)
-- `beautifulsoup4` (Advanced Parsing)
-- `rich` (Terminal UI)
+---
 
-## ⚖️ License
-This project is intended for educational and authorized security testing only. The author is not responsible for any misuse or damage caused by this tool.
+## 📖 Usage Guide
+
+```bash
+usage: WebAuthTester.py [-h] [-u USERLIST] [-p PASSLIST] [-c CONCURRENCY] [-x PROXY] target
+
+WebAuthTester Pro v2.2 - Advanced Authentication Auditing Suite
+
+positional arguments:
+  target                Target URL (e.g., https://example.com)
+
+🎯 TARGET CONFIGURATION:
+  target                Target URL (e.g., https://example.com)
+
+📂 WORDLISTS:
+  -u USERLIST, --userlist USERLIST
+                        Path to username wordlist (default: wordlists/usernames.txt)
+  -p PASSLIST, --passlist PASSLIST
+                        Path to password wordlist (default: wordlists/passwords.txt)
+
+⚡ PERFORMANCE & STEALTH:
+  -c CONCURRENCY, --concurrency CONCURRENCY
+                        Number of concurrent connections (default: 10)
+  -x PROXY, --proxy PROXY
+                        HTTP proxy to route traffic through (e.g. http://127.0.0.1:8080)
+```
+
+### Examples:
+- **Basic Audit:** `./WebAuthTester.py https://target.com`
+- **Fast Audit:** `./WebAuthTester.py https://target.com -c 30`
+- **Proxy/Burp Integration:** `./WebAuthTester.py https://target.com -x http://127.0.0.1:8080`
+
+---
+
+## ⚖️ Disclaimer
+This tool is for **authorized security testing** and **educational purposes only**. The developer assumes no liability for misuse or damage caused by this program.
