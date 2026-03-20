@@ -14,13 +14,13 @@ from .models import SecurityFinding
 console = Console()
 
 BANNER = r"""[bold red]
-  _      __     __    ___         __  _      
- | | /| / /__  / /_  / _ | __ __ / /_| |_    
- | |/ |/ / -_) __ \/ __ |/ // // __/| ' \   
+  __      __     __    ___         __  _      
+ |  | /| / /__  / /_  / _ | __ __ / /_| |_    
+ |  |/ |/ / -_) __ \/ __ |/ // // __/| ' \   
  |__/|__/\___/_.___/_/ |_|\_,_/ \__/ |_||_|  
                                              
- [bold white]    >> WebAuthTester Pro v2.6 << [/bold white]
- [italic white]  Enterprise Security Research Suite [/italic white]
+     >> WebAuthTester Pro v2.6 << 
+   Enterprise Security Research Suite 
 [/bold red]"""
 
 def show_banner() -> None:
