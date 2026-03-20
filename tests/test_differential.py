@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 import aiohttp
 from unittest.mock import AsyncMock, MagicMock
 from webauthtester.core.engine import BruteEngine

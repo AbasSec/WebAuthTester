@@ -9,7 +9,7 @@ import os
 import sys
 import yaml
 import logging
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple
 from textwrap import dedent
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from rich.panel import Panel
@@ -134,7 +134,7 @@ async def run_audit() -> None:
     async with aiohttp.ClientSession(connector=connector) as session:
         
         discovery = DiscoveryEngine(session, target, proxy=proxy)
-        with console.status("[bold green]Crawling target and parsing DOM for entry points...") as status:
+        with console.status("[bold green]Crawling target and parsing DOM for entry points..."):
             endpoints = await discovery.run()
 
         print_success(f"Discovered and mapped {len(endpoints)} authentication gateway(s).")

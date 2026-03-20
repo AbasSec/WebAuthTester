@@ -1,6 +1,4 @@
-import json
 import logging
-import re
 from typing import List, Optional, Tuple
 from bs4 import BeautifulSoup
 import urllib.parse
@@ -53,8 +51,8 @@ class JSONAuthModule(AuthModule):
 
         # 3. Heuristic: If the URL itself looks like a JSON login endpoint
         if any(path in url.lower() for path in ['/api/login', '/api/v1/auth', '/api/auth/token', '/api/session']):
-             if not any(e.url == url for e in endpoints):
-                 endpoints.append(AuthEndpoint(
+            if not any(e.url == url for e in endpoints):
+                endpoints.append(AuthEndpoint(
                     url=url,
                     auth_type='json',
                     method='POST',
