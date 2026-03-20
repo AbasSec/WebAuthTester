@@ -17,10 +17,12 @@
 4. [The Discovery Engine: Heuristic Surface Mapping](#4-the-discovery-engine-heuristic-surface-mapping)
    - [4.1. Queue Management & Worker Pools](#41-queue-management--worker-pools)
    - [4.2. DOM Parsing and Form Extraction](#42-dom-parsing-and-form-extraction)
+   - [4.3. Brotli Decoding Fix & Multi-Encoding Support](#43-brotli-decoding-fix--multi-encoding-support)
 5. [Authentication Modules: Deep Dive](#5-authentication-modules-deep-dive)
    - [5.1. FormAuthModule: HTML & CSRF Dynamics](#51-formauthmodule-html--csrf-dynamics)
    - [5.2. JSONAuthModule: Modern API Auditing](#52-jsonauthmodule-modern-api-auditing)
-   - [5.3. OAuthDetectionModule: Passive Intelligence](#53-oauthdetectionmodule-passive-intelligence)
+   - [5.3. FirebaseAuthModule: SPA & Google Identity Toolkit](#53-firebaseauthmodule-spa--google-identity-toolkit)
+   - [5.4. OAuthDetectionModule: Passive Intelligence](#54-oauthdetectionmodule-passive-intelligence)
 6. [Stateful Execution: Session & Connection Mechanics](#6-stateful-execution-session--connection-mechanics)
    - [6.1. TCP Connection Pooling](#61-tcp-connection-pooling)
    - [6.2. Absolute Logical Session Isolation](#62-absolute-logical-session-isolation)
@@ -35,7 +37,8 @@
    - [9.1. Rate Limit Detection (HTTP 429/403)](#91-rate-limit-detection-http-429403)
    - [9.2. Randomized Jitter](#92-randomized-jitter)
 10. [Vulnerability Classification (CWE & CVSS)](#10-vulnerability-classification-cwe--cvss)
-11. [Telemetry and Structured Reporting](#11-telemetry-and-structured-reporting)
+11. [Telemetry and UI Design Philosophy](#11-telemetry-and-ui-design-philosophy)
+    - [11.1. Dashboard vs. Manual Mode](#111-dashboard-vs-manual-mode)
 12. [Conclusion and Future Roadmap](#12-conclusion-and-future-roadmap)
 
 ---
@@ -74,14 +77,15 @@ This decoupling allows the orchestrator (`BruteEngine`) to remain completely agn
 
 ## 4. The Discovery Engine: Heuristic Surface Mapping
 
-The `DiscoveryEngine` is an asynchronous web crawler that maps the target's attack surface.
-
 ### 4.1. Queue Management & Worker Pools
 The engine utilizes an `asyncio.Queue`. It initializes by seeding the queue with the target URL and a dictionary of high-probability authentication paths (`/login`, `/api/v1/auth`, `/.well-known/openid-configuration`). 
-A pool of concurrent workers (default: 5) pulls URLs from the queue, fetches the DOM, and feeds the HTML into the registered plugins. The `visited` set ensures $O(1)$ lookup to prevent infinite crawling loops, hard-capped by the `max_pages` parameter.
+A pool of concurrent workers (default: 5) pulls URLs from the queue, fetches the DOM, and feeds the HTML into the registered plugins.
 
 ### 4.2. DOM Parsing and Form Extraction
 Using `BeautifulSoup4`, the engine parses the raw HTML. Crucially, it employs a custom `_is_internal` method leveraging `urllib.parse` to ensure the crawler does not bleed out of scope into external domains. 
+
+### 4.3. Brotli Decoding Fix & Multi-Encoding Support
+A critical enhancement in v2.6 was the mitigation of the "Brotli Crash." Modern hosting providers (Firebase, Netlify) often serve assets using `Content-Encoding: br`. The engine now explicitly handles content negotiation by requesting `gzip, deflate` via the `Accept-Encoding` header, ensuring 100% reliability during asset discovery on modern cloud infrastructures.
 
 ---
 
@@ -89,107 +93,77 @@ Using `BeautifulSoup4`, the engine parses the raw HTML. Crucially, it employs a 
 
 ### 5.1. FormAuthModule: HTML & CSRF Dynamics
 This module targets traditional `application/x-www-form-urlencoded` interfaces.
-- **Discovery Phase:** It scans for `<form>` tags containing `<input type="password">`. It applies regex heuristics to identify the username field (`user`, `email`, `login`) and hidden fields.
-- **CSRF Extraction:** Before executing a `test()`, if a CSRF field is detected, the module invokes `fetch_csrf_token()`. This makes an asynchronous GET request to the `source_page`, parses the DOM for the hidden token, and injects it into the POST payload. This occurs *per request*, entirely circumventing anti-automation defenses relying on single-use tokens.
+- **CSRF Extraction:** Before executing a `test()`, if a CSRF field is detected, the module invokes `fetch_csrf_token()`. This makes an asynchronous GET request to the `source_page`, parses the DOM for the hidden token, and injects it into the POST payload.
 
 ### 5.2. JSONAuthModule: Modern API Auditing
-Designed for RESTful APIs and SPAs.
-- **Discovery Phase:** It scans `<script>` tags and JSON-like structures in the DOM for indicators of API endpoints expecting raw JSON bodies.
-- **Execution Phase:** It constructs a standard dictionary payload (`{"username": u, "password": p}`) and utilizes the `json=` parameter in `aiohttp`, automatically setting the `Content-Type: application/json` header.
+Designed for RESTful APIs and SPAs. It constructs a standard dictionary payload (`{"username": u, "password": p}`) and utilizes the `json=` parameter in `aiohttp`. v2.6 introduced **Field Heuristics**, where the module automatically rotates between `email`, `user`, and `id` keys if the initial discovered fields appear generic.
 
-### 5.3. OAuthDetectionModule: Passive Intelligence
-Because automated brute-forcing against major IDPs (Google, Okta, Auth0) is out-of-scope and highly illegal, this module acts as a passive recon agent. It flags strings like `response_type=code`, `client_id=`, and `SAMLRequest`. These are logged as **Authentication Discovery** findings to map the enterprise identity architecture.
+### 5.3. FirebaseAuthModule: SPA & Google Identity Toolkit
+One of the most advanced features of v2.6. This module identifies applications built on Google Firebase.
+- **Automated Extraction:** It scans linked JavaScript files for the `apiKey` and `authDomain`.
+- **Direct API Auditing:** Instead of attacking the front-end HTML, it launches authenticated POST requests directly against the `identitytoolkit.googleapis.com` REST endpoint, simulating a true SPA authentication flow.
 
 ---
 
 ## 6. Stateful Execution: Session & Connection Mechanics
 
-The greatest engineering challenge in v2.6 was balancing extreme throughput with absolute session isolation.
-
 ### 6.1. TCP Connection Pooling
-Creating a new TLS handshake for every credential check introduces hundreds of milliseconds of latency per request. WebAuthTester Pro initializes a single, global `aiohttp.ClientSession` with a shared `TCPConnector`. This keeps the underlying sockets alive (Keep-Alive), allowing subsequent requests to bypass DNS resolution, TCP handshakes, and TLS key negotiation.
+WebAuthTester Pro initializes a single, global `aiohttp.ClientSession` with a shared `TCPConnector`. This keeps underlying sockets alive (Keep-Alive), resulting in a measured ~40% reduction in network latency.
 
 ### 6.2. Absolute Logical Session Isolation
-While the *socket* is shared, the *state* must not be. If attempt #1 receives a `Set-Cookie: failed_attempts=1`, attempt #2 must not inherit this cookie. 
-This is achieved by explicitly overriding the cookie jar at the request level:
-```python
-async with self.session.post(..., cookies={}, allow_redirects=False)
-```
-Passing an empty dictionary forces `aiohttp` to ignore the global `CookieJar` for that specific outbound request, ensuring pristine isolation while maintaining TCP pool performance—resulting in a measured ~40% reduction in latency.
+While the socket is shared, the state is isolated. This is achieved by passing `cookies={}` in every request, forcing `aiohttp` to ignore the global `CookieJar` and preventing cross-request state pollution (like "Failed Attempt" tracking by WAFs).
 
 ---
 
 ## 7. RAPTOR-Grade Differential Analysis Engine
 
-The `BruteEngine` uses Differential Response Modeling to determine success, abandoning fragile keyword lists.
-
 ### 7.1. Baseline Fingerprinting
-Before attacking an endpoint, the engine executes `capture_baseline()`. It generates a mathematically impossible credential (e.g., `fake_<timestamp>`) and submits it. The resulting HTTP status code, body length, and a 2000-character slice of the response body are saved as the `AuthBaseline`.
+Before auditing, the engine executes `capture_baseline()`. It sends a deliberately incorrect credential and saves the resulting HTTP status, length, and a 2000-character structural sample.
 
 ### 7.2. Gestalt Pattern Matching (SequenceMatcher)
-During the audit, the response body of every attempt is compared against the `AuthBaseline` using Python's `difflib.SequenceMatcher`. This algorithm computes a similarity ratio based on the longest contiguous matching subsequences:
+Every attempt's response is compared against the baseline using the ratio:
 $$Ratio = \frac{2 \times M}{T}$$
-Where $M$ is the number of matching characters, and $T$ is the total number of characters in both sequences.
+Where $M$ is matching characters and $T$ is total characters.
 
-### 7.3. Success Detection Heuristics & False Positive Reduction
-An attempt is marked as a valid credential if:
-1. **Status Shift:** The HTTP status differs from the baseline (e.g., Baseline was `401 Unauthorized`, Attempt is `200 OK`).
-2. **Structural Divergence:** The status is the same (e.g., both `200 OK`), but the SequenceMatcher ratio is **< 0.85**. This indicates the DOM structure has fundamentally changed (e.g., from a login form to a user dashboard).
-3. **Negative Keyword Validation:** To prevent false positives from generic error pages (e.g., a 500 Internal Server Error having a different structure than the baseline), the engine checks the diverged body against a negative list (`["invalid", "incorrect", "fail", "wrong"]`). If a negative keyword is present, the success flag is safely discarded.
-4. **Redirect Analysis:** If the response is a `301/302` redirect, the `Location` header is analyzed. If it redirects to an endpoint without "login" or "error" in the path, it is deemed a successful authentication.
+### 7.3. Success Detection Heuristics
+Success is flagged if:
+1. **Status Shift:** The status code differs from the baseline.
+2. **Structural Divergence:** The status is the same, but the SequenceMatcher ratio is **< 0.90**.
+3. **Explicit Markers:** The response contains tokens like `"success":true` or `idToken` which were absent in the baseline.
 
 ---
 
 ## 8. Attack Methodologies & Algorithmic Complexity
-
-### 8.1. Cartesian Brute Force ($O(N \times M)$)
-When standard brute force is engaged, the engine uses Python list comprehensions to generate a full cartesian product of $N$ users and $M$ passwords. This is comprehensive but highly noisy.
-
-### 8.2. Credential Stuffing ($O(N)$)
-When the `--stuffing` flag is active, the engine assumes the user and password lists are synchronized databases obtained from a data breach. It uses `zip(users, passwords)` to pair them 1:1, reducing the time complexity to $O(N)$. This is the most realistic simulation of modern credential stuffing attacks.
+- **Brute Force**: $O(N \times M)$ cartesian product.
+- **Credential Stuffing**: $O(N)$ linear pairing.
 
 ---
 
 ## 9. Evasion, Stealth, and WAF Bypassing
-
-### 9.1. Rate Limit Detection (HTTP 429/403)
-The engine monitors responses for HTTP 429 (Too Many Requests), HTTP 403 (Forbidden), and strings like "cloudflare" or "too many requests". If encountered, the `rate_limited` flag is globally tripped, gracefully halting the audit for that specific endpoint to prevent permanent IP banning.
-
-### 9.2. Randomized Jitter
-To defeat WAFs (Web Application Firewalls) that detect automated tools via predictable request cadences, the `--stealth` flag introduces execution jitter:
-```python
-if self.stealth:
-    await asyncio.sleep(random.uniform(0.5, 2.0))
-```
-Combined with the `asyncio.Semaphore(concurrency)` which acts as a throttling bottleneck, the framework can simulate human-like interaction timings.
+The engine globally monitors for HTTP 429/403 and Cloudflare-specific bodies. If detected, the `rate_limited` flag is tripped to prevent IP reputation damage.
 
 ---
 
 ## 10. Vulnerability Classification (CWE & CVSS)
-
-The engine generates instances of `SecurityFinding`. These are mapped to global security standards to facilitate immediate integration into bug bounty reports or enterprise compliance frameworks (e.g., SOC2, ISO 27001).
-
-| Vulnerability Type | CWE Identifier | CVSS v3.1 Base Score | Context & Remediation |
-| :--- | :--- | :--- | :--- |
-| **Improper Restriction of Excessive Authentication Attempts** | CWE-307 | 7.5 (High) | The endpoint allows continuous brute-forcing without triggering a lockout or rate limit. Mitigation: Implement CAPTCHA or incremental temporal lockouts. |
-| **Authentication Flow Discovery** | CWE-1000 | 0.0 (Info) | An OAuth2, OpenID Connect, or SAML gateway was discovered. Indicates reliance on third-party IDPs. |
-| **Valid Credentials Discovered** | CWE-287 / CWE-522 | 9.1 (Critical) | Successful authentication via weak or compromised credentials. |
+Findings are mapped to **CWE-307** (Restriction of Excessive Attempts) and **CWE-287** (Improper Authentication), with CVSS scores up to **9.1 (Critical)**.
 
 ---
 
-## 11. Telemetry and Structured Reporting
-The Command-Line Interface (`webauthtester/cli.py`) utilizes the `rich` Python library to generate thread-safe, non-blocking terminal UI components, including live progress bars and styled tables.
-Furthermore, the engine supports JSON serialization via the `-o` flag. The output structures the telemetry into `credentials` arrays and `vulnerabilities` arrays (with ISO 8601 timestamps), allowing seamless ingestion into SIEMs, Splunk, or custom CI/CD security pipelines.
+## 11. Telemetry and UI Design Philosophy
+
+### 11.1. Dashboard vs. Manual Mode
+v2.6 introduced a distinct separation of concerns in the CLI:
+- **Welcome Dashboard**: Triggered by running the script without arguments. It focuses on the "What" and "How" for beginners, providing a high-visibility Quick Start guide.
+- **Command Manual**: Triggered via `--help`. It provides a high-density technical reference for security professionals, listing all protocol flags and advanced usage examples.
 
 ---
 
 ## 12. Conclusion and Future Roadmap
-WebAuthTester Pro v2.6 establishes a new standard for asynchronous, open-source security tools. By abstracting the network layer into connection pools and moving success detection into mathematical modeling, it achieves enterprise-grade reliability.
+WebAuthTester Pro v2.6 is the most stable and capable version to date, providing a modular framework for auditing everything from legacy forms to modern Firebase-backed SPAs.
 
-**Future Development Roadmap:**
-- **Headless DOM Evaluation:** Integration with Playwright for executing JavaScript to extract dynamically generated, encrypted payloads (e.g., AWS Cognito SRP calculations).
-- **Protocol Expansion:** Adding modules for LDAP, SSH, and FTP to move beyond pure HTTP auditing.
-- **Intelligent Backoff:** Implementing adaptive backoff algorithms that automatically pause and resume audits based on dynamic WAF response headers (e.g., `Retry-After`).
+**Future Roadmap:**
+- **Headless Browser Integration**: Native Playwright support for complex JS-token generation.
+- **Native JWT Analysis**: Integrated decoding and algorithmic strength checking for discovered tokens.
 
 **WebAuthTester Pro v2.6 — Built for Elite Security Research**
 *AbasSec · Student of Cyber Security*

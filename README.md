@@ -23,7 +23,8 @@ A high-performance, asynchronous Python security framework for elite bug bounty 
   - [Quick Start (Automated)](#quick-start-automated)
   - [Manual Installation](#manual-installation)
 - [📖 Usage Guide](#-usage-guide)
-  - [Command-Line Interface](#command-line-interface)
+  - [Dashboard Mode (Beginners)](#dashboard-mode-beginners)
+  - [Manual Mode (Technical)](#manual-mode-technical)
   - [Advanced Attack Modes](#advanced-attack-modes)
 - [⚙️ Configuration (`config.yaml`)](#️-configuration-configyaml)
 - [🧩 Modular Architecture](#-modular-architecture)
@@ -39,10 +40,11 @@ A high-performance, asynchronous Python security framework for elite bug bounty 
 ---
 
 ## 🚀 Key Features (v2.6)
-- 🧩 **Plugin Architecture:** Decoupled modules for Form, JSON, and OAuth2 detection.
+- 🧩 **Plugin Architecture:** Decoupled modules for Form, JSON, Firebase, and OAuth2 detection.
 - 📉 **Differential Success Detection:** Uses `SequenceMatcher` to bypass `200 OK` failure responses.
 - 🔐 **Stateful CSRF Handling:** Dynamic token extraction and rotation per-request.
 - ⚡ **High-Performance Pooling:** Shared session architecture with ~40% latency reduction.
+- 🔥 **Firebase & SPA Support:** Automated identification and auditing of Firebase-backed apps.
 - 📈 **Credential Stuffing Mode:** Support for 1:1 user-to-password pairing.
 - 📊 **CWE/CVSS Tagging:** Vulnerability reporting with industry-standard classification.
 - 🐳 **Hardened Docker:** Multi-stage builds and non-root execution for safe deployments.
@@ -83,19 +85,22 @@ pip install -r requirements.txt
 
 # 3. (Optional) Customize Wordlists
 # Default wordlists are provided in the wordlists/ directory.
-# You can add your own or use the included ones.
 ```
 
 ---
 
 ## 📖 Usage Guide
 
-### Command-Line Interface
-The tool provides a professional CLI with built-in help and overviews.
-
+### Dashboard Mode (Beginners)
+Simply run the script without arguments to see a high-level overview and quick-start guide:
 ```bash
-# Display overview and help
-python3 main.py -help
+python3 main.py
+```
+
+### Manual Mode (Technical)
+Use the help flag to see the full technical manual and all available options:
+```bash
+python3 main.py --help
 ```
 
 ### Basic Brute Force
@@ -107,7 +112,7 @@ python3 main.py -t https://example.com
 ### Credential Stuffing (1:1 Pairing)
 Pairs the $n$-th username with the $n$-th password from your lists:
 ```bash
-python3 main.py -t https://target.com -u users.txt -p pass.txt --stuffing
+python3 main.py -t https://target.com -u wordlists/users.txt -p wordlists/pass.txt --stuffing
 ```
 
 ### Stealth Mode
@@ -130,9 +135,9 @@ Global defaults and operational settings can be tuned in `config.yaml`:
 ## 🧩 Modular Architecture
 The framework is built on a provider-based architecture located in `webauthtester/modules/`:
 - **`FormAuthModule`:** Handles standard HTML forms with CSRF and session management.
-- **`JSONAuthModule`:** Audits JSON-based API endpoints and modern SPA login flows.
+- **`JSONAuthModule`:** Audits JSON-based API endpoints with field heuristics.
+- **`FirebaseAuthModule`:** Deep auditing of modern Firebase SPAs via direct API hooks.
 - **`OAuthDetectionModule`:** Identifies OAuth2/OIDC/SAML flows.
-- **`BaseModule`:** The abstract base class for creating custom authentication handlers.
 
 Deep technical documentation for each module can be found in the `docs/` directory.
 
@@ -141,7 +146,7 @@ Deep technical documentation for each module can be found in the `docs/` directo
 ## 📊 Reporting
 WebAuthTester Pro generates professional, structured output:
 - **Terminal UI:** Real-time progress bars and color-coded results via `rich`.
-- **Structured JSON:** Export results with `-o results.json` for integration into CI/CD pipelines.
+- **Structured JSON:** Export results with `-o results.json` for CI/CD integration.
 - **Audit Logs:** Full execution details are stored in `webauthtester.log`.
 
 ---
