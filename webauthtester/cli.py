@@ -30,6 +30,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+VERSION = "2.6"
+
 def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
     """Loads operational configuration from a YAML file."""
     if os.path.exists(config_path):
@@ -70,6 +72,7 @@ def parse_arguments() -> Tuple[argparse.ArgumentParser, argparse.Namespace]:
     parser.add_argument("--full-scan", action="store_true", help="Enable exhaustive enterprise audit")
     parser.add_argument("--stealth", action="store_true", help="Enable stealth mode with randomized jitter")
     parser.add_argument("--stuffing", action="store_true", help="Pair users and passwords 1:1 (Credential Stuffing)")
+    parser.add_argument("--version", action="version", version=f"WebAuthTester Pro v{VERSION}")
     
     return parser, parser.parse_args()
 
@@ -83,7 +86,7 @@ def show_overview():
         • [green]Aggressive Discovery:[/green] Automated crawling and DOM parsing for auth gateways.
         • [green]Differential Analysis:[/green] RAPTOR-grade success detection using SequenceMatcher.
         • [green]Stateful Auditing:[/green] Real-time CSRF extraction and session isolation.
-        • [green]Multi-Protocol:[/green] Support for Form-based, JSON (coming soon), and OAuth2 detection.
+        • [green]Multi-Protocol:[/green] Support for Form-based, JSON (active), and OAuth2 detection.
         • [green]Stealth & Performance:[/green] Adaptive jitter, connection pooling, and concurrency control.
     """)
     console.print(Panel(overview_text, title="[bold yellow]Tool Overview[/bold yellow]", border_style="blue"))
@@ -119,6 +122,8 @@ async def run_audit() -> None:
         print_error("\nNo target specified. Use -t or define a target in config.yaml.")
         return
 
+    logger.info(f"Audit Started - WebAuthTester Pro v{VERSION} targeting {target}")
+    
     if not os.path.exists(userlist) or not os.path.exists(passlist):
         print_error(f"Wordlists missing. Checked paths: {userlist}, {passlist}")
         return

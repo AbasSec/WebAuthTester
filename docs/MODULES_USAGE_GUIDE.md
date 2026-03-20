@@ -1,6 +1,6 @@
 # WebAuthTester Pro: Comprehensive Usage Guide 📘
 
-This guide explains all command-line arguments and scenarios for using **WebAuthTester Pro v2.3**.
+This guide explains all command-line arguments and scenarios for using **WebAuthTester Pro v2.6**.
 
 ---
 
@@ -23,17 +23,22 @@ The basic syntax is as follows:
 
 ## 🚀 Advanced Usage Scenarios
 
-### 1. Auditing modern SPAs (Firebase/React/Vue)
-If the tool cannot find a standard form, it automatically initiates **Force-Discovery Mode**. You can also target API endpoints directly using the `config.yaml` mapping feature:
+### 1. Auditing modern SPAs and JSON APIs
+WebAuthTester Pro v2.6 introduces the **`JSONAuthModule`**, specifically designed to handle modern authentication flows. It automatically identifies endpoints that consume JSON payloads (e.g., `{"username": "...", "password": "..."}`) by:
+- Scanning for forms without standard HTML actions.
+- Heuristic analysis of API paths like `/api/login` and `/api/v1/auth`.
+- Parsing common JavaScript patterns.
 
-```yaml
-target: "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=YOUR_API_KEY"
-mapping:
-  username: "email"
-  password: "password"
-  extra:
-    returnSecureToken: True
+To target a JSON API directly:
+```bash
+python3 main.py -t https://api.target.com/v1/login -u users.txt -p pass.txt
 ```
+
+### 2. Auditing legacy HTML forms
+The **`FormAuthModule`** remains the industry standard for traditional SSR applications. It automatically handles:
+- CSRF token extraction and rotation.
+- `application/x-www-form-urlencoded` payloads.
+- Automated session isolation.
 
 ### 2. Deep-Crawl JavaScript Parsing
 The tool automatically fetches and parses all linked `.js` files on the target to identify hidden Firebase configurations and hardcoded API endpoints. No extra flags are required.

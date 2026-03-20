@@ -130,6 +130,7 @@ Global defaults and operational settings can be tuned in `config.yaml`:
 ## 🧩 Modular Architecture
 The framework is built on a provider-based architecture located in `webauthtester/modules/`:
 - **`FormAuthModule`:** Handles standard HTML forms with CSRF and session management.
+- **`JSONAuthModule`:** Audits JSON-based API endpoints and modern SPA login flows.
 - **`OAuthDetectionModule`:** Identifies OAuth2/OIDC/SAML flows.
 - **`BaseModule`:** The abstract base class for creating custom authentication handlers.
 

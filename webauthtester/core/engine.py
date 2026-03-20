@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 from .models import AuthEndpoint, AuthBaseline, SecurityFinding
 from webauthtester.modules.form_auth import FormAuthModule
 from webauthtester.modules.oauth_auth import OAuthDetectionModule
+from webauthtester.modules.json_auth import JSONAuthModule
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,8 @@ class DiscoveryEngine:
         # Register modules
         self.modules = [
             FormAuthModule(session, proxy),
-            OAuthDetectionModule(session, proxy)
+            OAuthDetectionModule(session, proxy),
+            JSONAuthModule(session, proxy)
         ]
 
     def _is_internal(self, url: str) -> bool:
@@ -122,7 +124,8 @@ class BruteEngine:
         # Initialize modules
         self.modules = {
             'form_urlencoded': FormAuthModule(session, proxy),
-            'oauth_detected': OAuthDetectionModule(session, proxy)
+            'oauth_detected': OAuthDetectionModule(session, proxy),
+            'json': JSONAuthModule(session, proxy)
         }
 
     async def capture_baseline(self, ep: AuthEndpoint):
