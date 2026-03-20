@@ -1,10 +1,9 @@
 import pytest
-import asyncio
 import aiohttp
 import sys
 import os
 
-# Ensure the package is in the path for CI
+# Add parent directory to sys.path for module discovery
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from webauthtester.core.engine import BruteEngine, DiscoveryEngine

@@ -29,4 +29,4 @@ dependencies = [
 "Bug Tracker" = "https://github.com/AbasSec/WebAuthTester/issues"
 
 [project.scripts]
-webauthtester = "main:run_audit"
+webauthtester = "webauthtester.cli:main"

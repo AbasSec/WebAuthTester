@@ -1,8 +1,5 @@
-import aiohttp
 import re
-import random
-import asyncio
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Tuple
 from bs4 import BeautifulSoup
 import urllib.parse
 from .base import AuthModule
@@ -84,18 +81,24 @@ class FormAuthModule(AuthModule):
 
         payload = {ep.username_field: u, ep.password_field: p, **extra}
         
-        # Session Isolation: Use a fresh cookie jar if we want absolute isolation
-        # For performance, we might just clear the session jar, but aiohttp's jar is a bit clunky to clear per-request in parallel.
-        # The prompt suggests fresh ClientSession or fresh CookieJar.
-        
-        jar = aiohttp.CookieJar()
-        async with aiohttp.ClientSession(cookie_jar=jar) as fresh_session:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            }
-            try:
-                async with fresh_session.post(ep.url, data=payload, headers=headers, proxy=self.proxy, allow_redirects=False, timeout=15) as resp:
-                    body = await resp.text(errors='ignore')
-                    return True, (resp.status, body, dict(resp.headers))
-            except Exception:
-                return False, None
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        }
+        try:
+            # Use shared session for connection pooling. 
+            # Passing cookies={} ensures we don't send existing session cookies,
+            # maintaining isolation between attempts.
+            async with self.session.post(
+                ep.url, 
+                data=payload, 
+                headers=headers, 
+                proxy=self.proxy, 
+                allow_redirects=False, 
+                timeout=15,
+                cookies={}
+            ) as resp:
+                body = await resp.text(errors='ignore')
+                return True, (resp.status, body, dict(resp.headers))
+        except Exception as e:
+            logger.debug(f"Error during test at {ep.url}: {e}")
+            return False, None

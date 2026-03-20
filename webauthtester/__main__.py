@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-WebAuthTester Pro - Shim Entry Point.
+WebAuthTester Pro - Module Entry Point.
 """
 
 from webauthtester.cli import main

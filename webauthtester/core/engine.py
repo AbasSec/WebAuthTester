@@ -5,13 +5,12 @@ WebAuth Core Engine - Refactored Plugin-Based Architecture.
 import asyncio
 import aiohttp
 import urllib.parse
-import re
 import random
 import logging
-import hashlib
 import time
-from typing import List, Dict, Optional, Set, Any, Tuple
+from typing import List, Dict, Set, Tuple
 from difflib import SequenceMatcher
+from bs4 import BeautifulSoup
 
 from .models import AuthEndpoint, AuthBaseline, SecurityFinding
 from webauthtester.modules.form_auth import FormAuthModule
@@ -31,6 +30,7 @@ class DiscoveryEngine:
     def __init__(self, session: aiohttp.ClientSession, target: str, max_pages: int = 30, proxy: str = None):
         self.session = session
         self.target = target.rstrip("/")
+        self.target_netloc = urllib.parse.urlparse(self.target).netloc
         self.max_pages = max_pages
         self.proxy = proxy
         self.visited: Set[str] = set()
@@ -41,6 +41,11 @@ class DiscoveryEngine:
             FormAuthModule(session, proxy),
             OAuthDetectionModule(session, proxy)
         ]
+
+    def _is_internal(self, url: str) -> bool:
+        """Determines if a URL is internal to the target domain."""
+        parsed = urllib.parse.urlparse(url)
+        return parsed.netloc == self.target_netloc or not parsed.netloc
 
     async def run(self) -> List[AuthEndpoint]:
         """Runs the aggressive discovery cycle."""
@@ -91,17 +96,13 @@ class DiscoveryEngine:
                 self.queue.task_done()
 
     async def _extract_links(self, html, source):
-        from bs4 import BeautifulSoup
         soup = BeautifulSoup(html, 'html.parser')
-        target_netloc = urllib.parse.urlparse(self.target).netloc
-        
         for tag in soup.find_all(['a', 'script', 'link']):
             val = tag.get('href') or tag.get('src')
             if not val: continue
             
             n = urllib.parse.urljoin(source, val)
-            parsed_n = urllib.parse.urlparse(n)
-            if parsed_n.netloc == target_netloc or not parsed_n.netloc:
+            if self._is_internal(n):
                 await self.queue.put(n)
 
 
@@ -132,7 +133,7 @@ class BruteEngine:
                 type="Authentication Discovery",
                 title="OAuth2/SSO Flow Detected",
                 severity="Info",
-                cwe="CWE-1000", # General category for info
+                cwe="CWE-1000",
                 cvss_score=0.0,
                 description=f"Identified potential OAuth2/OpenID Connect flow at {ep.url}. Brute force is out of scope.",
                 remediation="Ensure OAuth implementation follows security best practices (PKCE, redirect URI whitelisting).",
@@ -144,7 +145,7 @@ class BruteEngine:
         if not module: return False
 
         samples = []
-        for i in range(2):
+        for _ in range(2):
             success, resp_data = await module.test(ep, f"fake_{int(time.time())}", "FakePass123!", None)
             if success and resp_data:
                 samples.append(resp_data)
@@ -183,18 +184,23 @@ class BruteEngine:
                 return
 
             is_success = False
-            if status in [200, 201] and baseline and status != baseline.failed_status:
-                if not any(x in body_l for x in ["invalid", "incorrect", "fail", "wrong"]):
+            if baseline:
+                # Differential analysis
+                if status != baseline.failed_status:
                     is_success = True
-            elif status in [301, 302, 303]:
+                else:
+                    # Same status code, check body similarity
+                    ratio = SequenceMatcher(None, body_l[:2000], baseline.failed_body_sample).ratio()
+                    if ratio < 0.85: # Significant structural divergence
+                        # Check for common failure indicators to avoid false positives
+                        if not any(x in body_l for x in ["invalid", "incorrect", "fail", "wrong"]):
+                            is_success = True
+            
+            # Additional check for redirects (common in successful logins)
+            if not is_success and status in [301, 302, 303, 307, 308]:
                 loc = headers.get('Location', '').lower()
                 if loc and not any(x in loc for x in ['login', 'error', 'fail', 'signin']):
                     is_success = True
 
             if is_success:
                 self.results.append((ep.url, u, p))
-            
-            # Check for lack of account lockout (CWE-307)
-            # This is a simplistic check: if we've made many attempts and haven't hit rate limiting
-            # but this would require tracking attempts per endpoint.
-            # For now, we add a finding if rate_limited is still false after many attempts.

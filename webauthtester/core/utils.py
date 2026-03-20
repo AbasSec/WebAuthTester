@@ -8,6 +8,7 @@ colorized, and structured command-line interface for the framework.
 from typing import List, Tuple
 from rich.console import Console
 from rich.table import Table
+from .models import SecurityFinding
 
 console = Console()
 
@@ -36,8 +37,6 @@ def print_status(msg: str) -> None:
 def print_success(msg: str) -> None:
     """Prints a formatted success message."""
     console.print(f"[bold green][+] {msg}[/bold green]")
-
-from .models import SecurityFinding
 
 def display_findings(findings: List[SecurityFinding]) -> None:
     """Renders discovered security vulnerabilities in a professional table."""

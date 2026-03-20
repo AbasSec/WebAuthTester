@@ -1,6 +1,5 @@
-import asyncio
 import aiohttp
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Tuple
 from abc import ABC, abstractmethod
 from webauthtester.core.models import AuthEndpoint, AuthBaseline
 

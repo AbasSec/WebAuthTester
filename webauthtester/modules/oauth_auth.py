@@ -1,4 +1,3 @@
-import re
 from typing import List, Optional, Tuple
 from .base import AuthModule
 from webauthtester.core.models import AuthEndpoint, AuthBaseline

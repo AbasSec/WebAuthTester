@@ -30,7 +30,7 @@ else
 fi
 
 # Make the main script executable
-chmod +x WebAuthTester.py
+chmod +x main.py
 
 # Create default wordlists directory if it doesn't exist
 if [ ! -d "wordlists" ]; then
@@ -49,8 +49,8 @@ if [ "$VENV_CREATED" = true ]; then
     echo -e "\033[1;33m[!] To run the tool, first activate the virtual environment:\033[0m"
     echo -e "    source venv/bin/activate"
     echo -e "\033[1;33m[!] Then execute the script:\033[0m"
-    echo -e "    ./WebAuthTester.py https://target.com"
+    echo -e "    ./main.py https://target.com"
 else
     echo -e "\033[1;33m[!] To execute the script, simply run:\033[0m"
-    echo -e "    ./WebAuthTester.py https://target.com"
+    echo -e "    ./main.py https://target.com"
 fi

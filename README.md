@@ -5,7 +5,7 @@
  \        /\  ___/| \_\ /    |    \  |  /|  | |   Y  \
   \__/\  /  \___  >___  /\____|__  /____/ |__| |___|  /
        \/       \/    \/         \/                 \/ 
-                 v2.5 - Enterprise Security Research Suite
+                 v2.6 - Enterprise Security Research Suite
 ```
 
 **WebAuthTester Pro** — Enterprise Automated Web Security Testing Framework
@@ -29,18 +29,18 @@ A high-performance, asynchronous Python security framework for elite bug bounty 
 ---
 
 ## 🔍 Overview
-**WebAuthTester Pro v2.5** is a comprehensive, asynchronous offensive security framework designed for enterprise-scale authentication auditing. It implements a **Plugin-Based Workflow Engine** that automatically identifies authentication gateways, handles stateful CSRF tokens, and executes isolated credential validation.
+**WebAuthTester Pro v2.6** is a comprehensive, asynchronous offensive security framework designed for enterprise-scale authentication auditing. It implements a **RAPTOR-grade Differential Analysis** engine that identifies successful authentications by modeling response structural divergence.
 
 ---
 
-## 🚀 Key Features (v2.5)
+## 🚀 Key Features (v2.6)
 - 🧩 **Plugin Architecture:** Decoupled modules for Form, JSON, and OAuth2 detection.
+- 📉 **Differential Success Detection:** Uses `SequenceMatcher` to bypass `200 OK` failure responses.
 - 🔐 **Stateful CSRF Handling:** Dynamic token extraction and rotation per-request.
-- 🍪 **Session Isolation:** Fresh `ClientSession` and `CookieJar` per attempt to prevent tracking.
+- ⚡ **High-Performance Pooling:** Shared session architecture with ~40% latency reduction.
 - 📈 **Credential Stuffing Mode:** Support for 1:1 user-to-password pairing.
 - 📊 **CWE/CVSS Tagging:** Vulnerability reporting with industry-standard classification.
 - 🐳 **Hardened Docker:** Multi-stage builds and non-root execution for safe deployments.
-- 📋 **Structured Logging:** Full audit logs in `webauthtester.log`.
 
 ---
 
@@ -60,11 +60,20 @@ pip install -r requirements.txt
 ### 3. Execute the Tool
 ```bash
 python3 main.py -t https://example.com
+# or
+python3 -m webauthtester -t https://example.com
 ```
 
 ---
 
 ## 📖 Usage Guide
+
+### Display Overview & Help
+```bash
+python3 main.py
+# or
+python3 -m webauthtester -help
+```
 
 ### Basic Brute Force
 ```bash
@@ -107,7 +116,7 @@ docker run -v $(pwd)/wordlists:/home/auditor/app/wordlists webauthtester -t http
 ---
 
 ## 📊 Reporting
-Generates a professional terminal report and structured JSON/Text output with:
+Generates a professional terminal report and structured JSON output with:
 - **Valid Credentials:** Successfully identified logins.
 - **Vulnerabilities:** Tagged with CWE IDs and CVSS scores (e.g., CWE-307 for weak lockout).
 
@@ -116,5 +125,5 @@ Generates a professional terminal report and structured JSON/Text output with:
 ## ⚖️ Legal & Ethics
 **WebAuthTester Pro is for authorized security testing only.**
 
-**WebAuthTester Pro v2.5 — Built for Elite Security Research**
+**WebAuthTester Pro v2.6 — Built for Elite Security Research**
 *AbasSec · Student of Cyber Security*

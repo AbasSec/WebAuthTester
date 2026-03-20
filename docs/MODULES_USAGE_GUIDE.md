@@ -7,7 +7,9 @@ This guide explains all command-line arguments and scenarios for using **WebAuth
 ## 🛠️ Basic Command-Line Arguments
 
 The basic syntax is as follows:
-`./WebAuthTester.py [TARGET] [OPTIONS]`
+`python3 main.py [TARGET] [OPTIONS]`
+# or
+`python3 -m webauthtester [TARGET] [OPTIONS]`
 
 ### Core Options:
 - `target`: The target URL (e.g., `https://example.com`).
@@ -39,12 +41,12 @@ The tool automatically fetches and parses all linked `.js` files on the target t
 ### 3. High-Performance / Massive Brute Force
 Increase concurrency for faster testing on stable servers:
 ```bash
-./WebAuthTester.py https://target.com -c 50
+python3 main.py https://target.com -c 50
 ```
 
 ### 4. Traffic Interception with Burp Suite
 1. Open Burp Suite (Default: `127.0.0.1:8080`).
-2. Run: `./WebAuthTester.py https://target.com -x http://127.0.0.1:8080`
+2. Run: `python3 main.py https://target.com -x http://127.0.0.1:8080`
 
 ---
 
