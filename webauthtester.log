@@ -1,3 +1,37 @@
 2026-03-20 07:18:37,586 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
 2026-03-20 07:18:46,314 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
 2026-03-20 07:19:08,075 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-20 07:28:22,864 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-20 07:28:50,589 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-20 07:30:09,646 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-20 07:33:55,918 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-20 07:35:09,446 [DEBUG] Using selector: EpollSelector
+2026-03-20 07:35:09,452 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-20 07:35:10,072 [DEBUG] Worker error on https://al-mokadam-educational-agency.web.app/admin.html: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:35:47,508 [DEBUG] Using selector: EpollSelector
+2026-03-20 07:35:47,514 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-20 07:35:57,453 [DEBUG] Error during test at https://al-mokadam-educational-agency.web.app/admin.html: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:35:57,569 [DEBUG] Error during test at https://al-mokadam-educational-agency.web.app/admin.html: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:35:57,709 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with loginEmail/loginPassword: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:35:57,835 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with email/password: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:35:58,421 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with user/pass: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:35:58,751 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with login/password: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:36:00,104 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with id/pwd: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:36:00,310 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with loginEmail/loginPassword: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:36:00,524 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with email/password: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:36:00,939 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with user/pass: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:36:01,176 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with login/password: 400, message:
+  Can not decode content-encoding: br
+2026-03-20 07:36:01,395 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with id/pwd: 400, message:
+  Can not decode content-encoding: br

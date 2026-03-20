@@ -65,32 +65,65 @@ class JSONAuthModule(AuthModule):
         return endpoints
 
     async def test(self, ep: AuthEndpoint, u: str, p: str, baseline: Optional[AuthBaseline]) -> Tuple[bool, Optional[Tuple[int, str, dict]]]:
-        payload = {
-            ep.username_field: u,
-            ep.password_field: p
-        }
-        # Add any extra fields if they exist
-        if ep.extra_fields:
-            payload.update(ep.extra_fields)
+        # Heuristic: Try multiple common JSON field names if the discovered ones are generic
+        # (Often discovered as 'username' but the API expects 'email')
+        field_variations = [
+            (ep.username_field, ep.password_field),
+            ('email', 'password'),
+            ('user', 'pass'),
+            ('login', 'password'),
+            ('id', 'pwd')
+        ]
+        
+        # Unique list of variations to try
+        seen = set()
+        final_variations = []
+        for uf, pf in field_variations:
+            if (uf, pf) not in seen:
+                final_variations.append((uf, pf))
+                seen.add((uf, pf))
 
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Referer': ep.source_page or ep.url
         }
-        
-        try:
-            async with self.session.post(
-                ep.url, 
-                json=payload, 
-                headers=headers, 
-                proxy=self.proxy, 
-                allow_redirects=False, 
-                timeout=15,
-                cookies={}
-            ) as resp:
-                body = await resp.text(errors='ignore')
-                return True, (resp.status, body, dict(resp.headers))
-        except Exception as e:
-            logger.debug(f"JSON test error at {ep.url}: {e}")
-            return False, None
+
+        for uf, pf in final_variations:
+            payload = {uf: u, pf: p}
+            if ep.extra_fields:
+                payload.update(ep.extra_fields)
+            
+            try:
+                async with self.session.post(
+                    ep.url, 
+                    json=payload, 
+                    headers=headers, 
+                    proxy=self.proxy, 
+                    allow_redirects=False, 
+                    timeout=15,
+                    cookies={}
+                ) as resp:
+                    body = await resp.text(errors='ignore')
+                    body_l = body.lower()
+                    
+                    # Success check: If the response is fundamentally different from a failure
+                    # Or contains explicit success indicators (token, success: true, etc.)
+                    is_success = False
+                    if resp.status in [200, 201]:
+                        if any(x in body_l for x in ['token', '"success":true', 'access_token', 'jwt', '"authenticated":true']):
+                            is_success = True
+                        elif baseline and resp.status != baseline.failed_status:
+                            is_success = True
+                    
+                    if is_success:
+                        return True, (resp.status, body, dict(resp.headers))
+                    
+                    # If this was the last variation, return it for baseline comparison
+                    if uf == final_variations[-1][0]:
+                        return True, (resp.status, body, dict(resp.headers))
+            except Exception as e:
+                logger.debug(f"JSON test error at {ep.url} with {uf}/{pf}: {e}")
+                
+        return False, None

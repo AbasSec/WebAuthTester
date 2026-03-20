@@ -16,6 +16,7 @@ from .models import AuthEndpoint, AuthBaseline, SecurityFinding
 from webauthtester.modules.form_auth import FormAuthModule
 from webauthtester.modules.oauth_auth import OAuthDetectionModule
 from webauthtester.modules.json_auth import JSONAuthModule
+from webauthtester.modules.firebase_auth import FirebaseAuthModule
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,10 @@ class DiscoveryEngine:
         self.modules = [
             FormAuthModule(session, proxy),
             OAuthDetectionModule(session, proxy),
-            JSONAuthModule(session, proxy)
+            JSONAuthModule(session, proxy),
+            FirebaseAuthModule(session, proxy)
         ]
+
 
     def _is_internal(self, url: str) -> bool:
         """Determines if a URL is internal to the target domain."""
@@ -77,7 +80,10 @@ class DiscoveryEngine:
                     continue
                 
                 self.visited.add(url)
-                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Accept-Encoding': 'gzip, deflate' # Explicitly prevent Brotli (br) to avoid aiohttp decode errors
+                }
                 
                 async with self.session.get(url, headers=headers, proxy=self.proxy, timeout=10) as resp:
                     body = await resp.text(errors='ignore')
@@ -125,7 +131,8 @@ class BruteEngine:
         self.modules = {
             'form_urlencoded': FormAuthModule(session, proxy),
             'oauth_detected': OAuthDetectionModule(session, proxy),
-            'json': JSONAuthModule(session, proxy)
+            'json': JSONAuthModule(session, proxy),
+            'firebase': FirebaseAuthModule(session, proxy)
         }
 
     async def capture_baseline(self, ep: AuthEndpoint):
@@ -194,15 +201,22 @@ class BruteEngine:
                 else:
                     # Same status code, check body similarity
                     ratio = SequenceMatcher(None, body_l[:2000], baseline.failed_body_sample).ratio()
-                    if ratio < 0.85: # Significant structural divergence
-                        # Check for common failure indicators to avoid false positives
-                        if not any(x in body_l for x in ["invalid", "incorrect", "fail", "wrong"]):
+                    # If the body is significantly different (ratio < 0.85) OR 
+                    # contains explicit success markers that the baseline DID NOT have.
+                    if ratio < 0.90: # Slightly higher threshold for sensitivity
+                        # Avoid common failure keywords
+                        if not any(x in body_l for x in ["invalid", "incorrect", "fail", "wrong", "error"]):
                             is_success = True
+                    
+                    # Explicit Success Tokens (overrides structural check)
+                    success_indicators = ['token', '"success":true', 'access_token', '"authenticated":true', 'jwt']
+                    if any(x in body_l for x in success_indicators) and not any(x in baseline.failed_body_sample for x in success_indicators):
+                        is_success = True
             
-            # Additional check for redirects (common in successful logins)
+            # Additional check for redirects
             if not is_success and status in [301, 302, 303, 307, 308]:
                 loc = headers.get('Location', '').lower()
-                if loc and not any(x in loc for x in ['login', 'error', 'fail', 'signin']):
+                if loc and not any(x in loc for x in ['login', 'error', 'fail', 'signin', 'auth']):
                     is_success = True
 
             if is_success:

@@ -22,7 +22,7 @@ from webauthtester.core.utils import (
 
 # Configure proper logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.FileHandler('webauthtester.log')
