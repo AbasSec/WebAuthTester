@@ -13,13 +13,13 @@ from .models import SecurityFinding
 console = Console()
 
 BANNER = r"""[bold red]
- __      __      ___.       _____         __  .__     
-/  \    /  \ ____\_ |__    /  _  \  __ ___/  |_|  |__  
-\   \/\/   // __ \| __ \  /  /_\  \|  |  \   __\  |  \ 
- \        /\  ___/| \_\ /    |    \  |  /|  | |   Y  \
-  \__/\  /  \___  >___  /\____|__  /____/ |__| |___|  /
-       \/       \/    \/         \/                 \/ 
-                 [italic white]v2.2 - Enterprise Security Research Suite[/italic white]
+  _      __     __    ___         __  _      
+ | | /| / /__  / /_  / _ | __ __ / /_| |_    
+ | |/ |/ / _ \/ __ \/ __ |/ // // __/| ' \   
+ |__/|__/\___/_.___/_/ |_|\_,_/ \__/ |_||_|  
+                                             
+ [bold white]    >> WebAuthTester Pro v2.6 << [/bold white]
+ [italic white]  Enterprise Security Research Suite [/italic white]
 [/bold red]"""
 
 def show_banner() -> None:
@@ -28,15 +28,15 @@ def show_banner() -> None:
 
 def print_error(msg: str) -> None:
     """Prints a formatted critical error message."""
-    console.print(f"[bold red][!] {msg}[/bold red]")
+    console.print(Panel(f"[bold red]ERROR:[/bold red] {msg}", border_style="red"))
 
 def print_status(msg: str) -> None:
     """Prints a formatted informational status message."""
-    console.print(f"[bold blue][*] {msg}[/bold blue]")
+    console.print(f"[bold blue]→[/bold blue] [white]{msg}[/white]")
 
 def print_success(msg: str) -> None:
     """Prints a formatted success message."""
-    console.print(f"[bold green][+] {msg}[/bold green]")
+    console.print(Panel(f"[bold green]SUCCESS:[/bold green] {msg}", border_style="green"))
 
 def display_findings(findings: List[SecurityFinding]) -> None:
     """Renders discovered security vulnerabilities in a professional table."""
