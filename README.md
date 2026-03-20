@@ -81,9 +81,9 @@ source venv/bin/activate
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Create wordlists directory
-mkdir -p wordlists
-# (Populate wordlists/usernames.txt and wordlists/passwords.txt)
+# 3. (Optional) Customize Wordlists
+# Default wordlists are provided in the wordlists/ directory.
+# You can add your own or use the included ones.
 ```
 
 ---
