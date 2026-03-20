@@ -35,3 +35,5 @@
   Can not decode content-encoding: br
 2026-03-20 07:36:01,395 [DEBUG] JSON test error at https://al-mokadam-educational-agency.web.app/admin.html with id/pwd: 400, message:
   Can not decode content-encoding: br
+2026-03-20 07:55:09,381 [DEBUG] Using selector: EpollSelector
+2026-03-20 07:55:16,089 [DEBUG] Using selector: EpollSelector
