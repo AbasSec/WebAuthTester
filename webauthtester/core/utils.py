@@ -8,6 +8,7 @@ colorized, and structured command-line interface for the framework.
 from typing import List, Tuple
 from rich.console import Console
 from rich.table import Table
+from rich.panel import Panel
 from .models import SecurityFinding
 
 console = Console()
