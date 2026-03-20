@@ -13,6 +13,8 @@ from typing import Dict, Any, Tuple
 from textwrap import dedent
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 
 from webauthtester.core.engine import DiscoveryEngine, BruteEngine
 from webauthtester.core.utils import (
@@ -30,10 +32,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from rich.table import Table
-from rich.text import Text
-from rich.columns import Columns
-
 VERSION = "2.6"
 
 def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
@@ -46,63 +44,74 @@ def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
             print_error(f"Failed to parse config.yaml: {e}")
     return {}
 
-def show_help():
-    """Displays a beautiful, colored, and beginner-friendly help menu."""
+def show_welcome():
+    """Displays a beautiful, beginner-friendly Welcome Dashboard."""
     show_banner()
     
-    # Overview Panel
-    overview_text = Text.from_markup(dedent("""
-        [bold cyan]WebAuthTester Pro v2.6[/bold cyan] is an advanced security tool that helps you test 
-        if your website's login pages are secure against common attacks. 
+    # About Section
+    about_text = Text.from_markup(dedent("""
+        [bold cyan]WebAuthTester Pro[/bold cyan] is your automated assistant for website security.
+        It scans for login forms and tests if they are properly protected against 
+        common password-guessing attacks.
         
-        It works by automatically finding login forms and testing them with lists of 
-        usernames and passwords to see if any work or if the site properly blocks them.
+        [bold white]Core Goals:[/bold white]
+        • [green]Discovery:[/green] Automatically find hidden login pages and APIs.
+        • [green]Analysis:[/green] Use advanced math to detect successful logins.
+        • [green]Security:[/green] Ensure your site isn't leaking user data.
     """))
-    console.print(Panel(overview_text, title="[bold yellow]What is this tool?[/bold yellow]", border_style="blue", padding=(1, 2)))
+    console.print(Panel(about_text, title="[bold yellow]Welcome Dashboard[/bold yellow]", border_style="blue", padding=(1, 2)))
 
-    # Usage Table
-    usage_table = Table(show_header=False, box=None, padding=(0, 1))
-    usage_table.add_row("[bold green]Usage:[/bold green]", "[bold white]python3 main.py -t <url> [options][/bold white]")
-    console.print(usage_table)
+    # Quick Start Guide
+    quick_start = dedent("""
+        [bold green]Ready to start your first audit?[/bold green]
+        Run this command to test a website:
+        [bold white]python3 main.py -t https://mysite.com[/bold white]
+        
+        [bold yellow]Looking for technical options?[/bold yellow]
+        View the full manual:
+        [bold white]python3 main.py --help[/bold white]
+    """)
+    console.print(Panel(quick_start, title="[bold green]🚀 Quick Start[/bold green]", border_style="green"))
+    console.print("\n[italic white]Tip: Always ensure you have permission before testing any website![/italic white]\n")
+
+def show_manual():
+    """Displays a clean, organized technical manual."""
+    show_banner()
+    
+    # Manual Header
+    console.print("\n[bold magenta]COMMAND LINE MANUAL[/bold magenta]")
+    console.print("[bold white]Usage:[/bold white] [cyan]python3 main.py -t <url> [options][/cyan]\n")
 
     # Options Table
-    opts_table = Table(title="\n[bold yellow]Available Options[/bold yellow]", header_style="bold magenta", box=None, expand=True)
-    opts_table.add_column("Flag", style="cyan", no_wrap=True, width=20)
-    opts_table.add_column("Description", style="white")
+    opts_table = Table(header_style="bold cyan", box=None, expand=True)
+    opts_table.add_column("Flag", style="bold yellow", no_wrap=True, width=20)
+    opts_table.add_column("Technical Purpose", style="white")
 
-    opts_table.add_row("-t, --target", "The website you want to test (e.g., [underline]https://example.com[/underline])")
-    opts_table.add_row("-u, --userlist", "File containing usernames to test (default: wordlists/usernames.txt)")
-    opts_table.add_row("-p, --passlist", "File containing passwords to test (default: wordlists/passwords.txt)")
-    opts_table.add_row("-c, --concurrency", "How many tests to run at the same time (default: 10)")
-    opts_table.add_row("-o, --output", "Save the results to a file (e.g., results.json)")
-    opts_table.add_row("--stealth", "Slow down the testing to avoid being blocked by the website")
-    opts_table.add_row("--stuffing", "Test specific username+password pairs instead of every combination")
-    opts_table.add_row("--version", "Show which version of the tool you are using")
-    opts_table.add_row("-h, --help", "Show this help message")
+    opts_table.add_row("-t, --target", "The target URL to begin crawling and auditing.")
+    opts_table.add_row("-u, --userlist", "Path to a custom list of usernames.")
+    opts_table.add_row("-p, --passlist", "Path to a custom list of passwords.")
+    opts_table.add_row("-c, --concurrency", "Max parallel requests (default: 10).")
+    opts_table.add_row("-o, --output", "Save findings to a JSON report file.")
+    opts_table.add_row("--stealth", "Enable randomized jitter to bypass WAFs.")
+    opts_table.add_row("--stuffing", "Perform 1:1 credential stuffing pairs.")
+    opts_table.add_row("--version", "Print version and exit.")
+    opts_table.add_row("-h, --help", "Display this technical manual.")
     
     console.print(opts_table)
 
-    # Examples Section
-    example_panel = Panel(
-        Text.from_markup(dedent("""
-            [bold green]1. Simple Scan:[/bold green]
-               python3 main.py -t https://mysite.com
-            
-            [bold green]2. Using Custom Lists:[/bold green]
-               python3 main.py -t https://mysite.com -u myusers.txt -p mypass.txt
-            
-            [bold green]3. Stealthy Testing (Safer):[/bold green]
-               python3 main.py -t https://mysite.com --stealth
-            
-            [bold green]4. Credential Stuffing (1:1 Pairs):[/bold green]
-               python3 main.py -t https://mysite.com --stuffing
-        """)),
-        title="[bold yellow]Easy Examples for Beginners[/bold yellow]",
-        border_style="green",
-        padding=(1, 2)
-    )
-    console.print(example_panel)
-    console.print("\n[italic white]Tip: Always ensure you have permission before testing any website![/italic white]\n")
+    # Advanced Examples
+    example_text = dedent("""
+        [bold cyan]Standard Brute Force:[/bold cyan]
+        python3 main.py -t https://example.com
+        
+        [bold cyan]Stealthy Audit with Custom Lists:[/bold cyan]
+        python3 main.py -t https://example.com -u users.txt -p pass.txt --stealth
+        
+        [bold cyan]Credential Stuffing (Linear):[/bold cyan]
+        python3 main.py -t https://example.com --stuffing
+    """)
+    console.print(Panel(example_text, title="[bold magenta]Practical Examples[/bold magenta]", border_style="magenta"))
+    console.print("")
 
 def parse_arguments() -> Tuple[argparse.ArgumentParser, argparse.Namespace]:
     """Parses command-line arguments."""
@@ -123,21 +132,6 @@ def parse_arguments() -> Tuple[argparse.ArgumentParser, argparse.Namespace]:
     
     return parser, parser.parse_args()
 
-def show_overview():
-    """Displays a high-level overview of the tool's capabilities."""
-    overview_text = dedent("""
-        [bold cyan]WebAuthTester Pro v2.6[/bold cyan] is a high-performance, asynchronous security framework
-        designed for enterprise-scale authentication auditing.
-
-        [bold white]Core Capabilities:[/bold white]
-        • [green]Aggressive Discovery:[/green] Automated crawling and DOM parsing for auth gateways.
-        • [green]Differential Analysis:[/green] RAPTOR-grade success detection using SequenceMatcher.
-        • [green]Stateful Auditing:[/green] Real-time CSRF extraction and session isolation.
-        • [green]Multi-Protocol:[/green] Support for Form-based, JSON (active), and OAuth2 detection.
-        • [green]Stealth & Performance:[/green] Adaptive jitter, connection pooling, and concurrency control.
-    """)
-    console.print(Panel(overview_text, title="[bold yellow]Tool Overview[/bold yellow]", border_style="blue"))
-
 async def run_audit() -> None:
     """Main orchestration function for the security audit."""
     parser, args = parse_arguments()
@@ -146,11 +140,16 @@ async def run_audit() -> None:
         console.print(f"[bold cyan]WebAuthTester Pro v{VERSION}[/bold cyan]")
         return
 
-    if args.help or len(sys.argv) == 1:
-        show_help()
+    # Triggered when no arguments are provided
+    if len(sys.argv) == 1:
+        show_welcome()
         return
 
-    config = load_config(args.config)
+    # Triggered when --help is used
+    if args.help:
+        show_manual()
+        return
+
     config = load_config(args.config)
     
     target_raw = args.target or config.get('target')
@@ -167,8 +166,8 @@ async def run_audit() -> None:
     show_banner()
     
     if not target:
-        parser.print_help()
-        print_error("\nNo target specified. Use -t or define a target in config.yaml.")
+        show_manual()
+        print_error("\nNo target specified. Please use the -t flag to provide a URL.")
         return
 
     logger.info(f"Audit Started - WebAuthTester Pro v{VERSION} targeting {target}")
