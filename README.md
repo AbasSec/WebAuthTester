@@ -30,6 +30,7 @@ A high-performance, asynchronous Python security framework for elite bug bounty 
 - [🧩 Modular Architecture](#-modular-architecture)
 - [📊 Reporting](#-reporting)
 - [🐳 Docker Deployment](#-docker-deployment)
+- [❓ Troubleshooting](#-troubleshooting)
 - [⚖️ Legal & Ethics](#-legal--ethics)
 
 ---
@@ -83,8 +84,8 @@ source venv/bin/activate
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. (Optional) Customize Wordlists
-# Default wordlists are provided in the wordlists/ directory.
+# 3. Install in editable mode (optional, for development)
+pip install -e .
 ```
 
 ---
@@ -159,6 +160,24 @@ docker build -t webauthtester .
 
 # Run an audit
 docker run --rm -v $(pwd)/wordlists:/home/auditor/app/wordlists webauthtester -t https://example.com
+```
+
+---
+
+## ❓ Troubleshooting
+
+### ModuleNotFoundError: No module named 'yaml'
+If you encounter this error, it means `PyYAML` is not installed in your current environment. This can happen if you skip the `pip install -r requirements.txt` step.
+**Fix:**
+```bash
+pip install PyYAML>=6.0
+```
+
+### Missing Wordlists
+The tool requires wordlists to function. If the `wordlists/` directory is empty or missing, run the `setup.sh` script or manually create them.
+**Fix:**
+```bash
+./setup.sh
 ```
 
 ---
