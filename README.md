@@ -4,7 +4,7 @@
  |  |/ |/ / -_) __ \/ __ |/ // // __/| ' \   
  |__/|__/\___/_.___/_/ |_|\_,_/ \__/ |_||_|  
 
-     >> WebAuthTester Pro v2.6 << 
+     >> WebAuthTester v2.6 << 
    Enterprise Security Research Suite 
 ```
 
