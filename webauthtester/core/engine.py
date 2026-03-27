@@ -216,8 +216,10 @@ class BruteEngine:
                     # If the body is significantly different (ratio < SIMILARITY_THRESHOLD) OR 
                     # contains explicit success markers that the baseline DID NOT have.
                     if ratio < self.SIMILARITY_THRESHOLD: 
-                        # Avoid common failure keywords
-                        if not any(x in body_l for x in ["invalid", "incorrect", "fail", "wrong", "error"]):
+                        # Only mark as success if it doesn't contain a NEW failure keyword 
+                        # that the baseline didn't have.
+                        fail_indicators = ["invalid", "incorrect", "fail", "wrong", "error"]
+                        if not any(x in body_l and x not in baseline.failed_body_sample for x in fail_indicators):
                             is_success = True
                     
                     # Explicit Success Tokens (overrides structural check)
@@ -232,4 +234,10 @@ class BruteEngine:
                     is_success = True
 
             if is_success:
+                # Add to results list
                 self.results.append((ep.url, u, p))
+                # Log success to console immediately for better UX
+                from .utils import console
+                console.print(f"\n[bold green][+] VALID CREDENTIALS FOUND:[/bold green] [white]{u}:{p}[/white] at [cyan]{ep.url}[/cyan]")
+                return True
+            return False

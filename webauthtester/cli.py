@@ -176,6 +176,19 @@ async def run_audit() -> None:
         print_error(f"Wordlists missing. Checked paths: {userlist}, {passlist}")
         return
 
+    # Pre-load wordlists once
+    try:
+        with open(userlist, 'r', encoding='utf-8') as fu:
+            users = [line.strip() for line in fu if line.strip()]
+        with open(passlist, 'r', encoding='utf-8') as fp:
+            passwords = [line.strip() for line in fp if line.strip()]
+    except IOError as e:
+        print_error(f"Error reading wordlists: {e}")
+        return
+
+    if len(users) * len(passwords) <= 1:
+        console.print("[yellow][!] Warning: Small wordlist detected. For a real brute force, use the larger default lists.[/yellow]")
+
     print_status(f"Initializing Enterprise Audit for: [bold white]{target}[/bold white]")
 
     connector = aiohttp.TCPConnector(ssl=False)
@@ -195,15 +208,6 @@ async def run_audit() -> None:
             await brute.capture_baseline(ep)
             if ep.url not in brute.baselines and not ep.is_oauth:
                 continue
-
-            try:
-                with open(userlist, 'r', encoding='utf-8') as fu:
-                    users = [line.strip() for line in fu if line.strip()]
-                with open(passlist, 'r', encoding='utf-8') as fp:
-                    passwords = [line.strip() for line in fp if line.strip()]
-            except IOError as e:
-                print_error(f"Error reading wordlists: {e}")
-                return
 
             if stuffing:
                 pairs = list(zip(users, passwords))
@@ -229,8 +233,23 @@ async def run_audit() -> None:
                     await brute.test(ep, u, p)
                     progress.update(task_p, advance=1)
 
-                tasks = [track_task(u, p) for u, p in pairs]
-                await asyncio.gather(*tasks)
+                # Use a limited number of workers if the list is very large
+                if total_attempts > 1000:
+                    queue = asyncio.Queue()
+                    for u, p in pairs:
+                        await queue.put((u, p))
+                    
+                    async def worker():
+                        while not queue.empty():
+                            u, p = await queue.get()
+                            await track_task(u, p)
+                            queue.task_done()
+                    
+                    workers = [asyncio.create_task(worker()) for _ in range(concurrency)]
+                    await asyncio.gather(*workers)
+                else:
+                    tasks = [track_task(u, p) for u, p in pairs]
+                    await asyncio.gather(*tasks)
             
             if brute.rate_limited:
                 print_error("Security Response Triggered: Rate Limit detected. Aborted endpoint audit.")
