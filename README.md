@@ -8,7 +8,7 @@
    Enterprise Security Research Suite 
 ```
 
-**WebAuthTester Pro** — Enterprise Automated Web Security Testing Framework
+**WebAuthTester** — Enterprise Automated Web Security Testing Framework
 Reconnaissance · Exploitation · Authorization · Intelligence
 
 A high-performance, asynchronous Python security framework for elite bug bounty hunters and red teams.
