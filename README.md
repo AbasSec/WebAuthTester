@@ -186,5 +186,5 @@ The tool requires wordlists to function. If the `wordlists/` directory is empty 
 **WebAuthTester Pro is for authorized security testing only.**
 Unauthorized use against systems without prior written consent is illegal and unethical. The authors assume no liability for misuse.
 
-**WebAuthTester Pro v2.6 — Built for Elite Security Research**
-*AbasSec · Student of Cyber Security*
+**WebAuthTester v2.6 — Built for Elite Security Research**
+*AbasSec*
