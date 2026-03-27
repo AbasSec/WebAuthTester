@@ -7,7 +7,6 @@ import aiohttp
 import urllib.parse
 import random
 import logging
-import time
 from typing import List, Dict, Set, Tuple
 from difflib import SequenceMatcher
 from bs4 import BeautifulSoup
@@ -82,7 +81,7 @@ class DiscoveryEngine:
                 self.visited.add(url)
                 headers = {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                    'Accept-Encoding': 'gzip, deflate' # Explicitly prevent Brotli (br) to avoid aiohttp decode errors
+                    'Accept-Encoding': 'identity' # Explicitly prevent compression issues in some edge cases
                 }
                 
                 async with self.session.get(url, headers=headers, proxy=self.proxy, timeout=10) as resp:
@@ -99,24 +98,36 @@ class DiscoveryEngine:
                     await self._extract_links(body, str(resp.url))
 
             except Exception as e:
-                logger.debug(f"Worker error on {url}: {e}")
+                logger.error(f"Discovery worker error on {url}: {type(e).__name__}: {e}")
             finally: 
                 self.queue.task_done()
 
-    async def _extract_links(self, html, source):
+    async def _extract_links(self, html: str, source: str):
+        """Extracts and filters internal links for further discovery."""
         soup = BeautifulSoup(html, 'html.parser')
+        # Skip common static assets to save resources
+        skip_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.svg', '.css', '.js', '.woff', '.ttf', '.ico', '.pdf')
+        
         for tag in soup.find_all(['a', 'script', 'link']):
             val = tag.get('href') or tag.get('src')
-            if not val: continue
+            if not val:
+                continue
             
-            n = urllib.parse.urljoin(source, val)
-            if self._is_internal(n):
-                await self.queue.put(n)
+            # Basic sanity check to avoid binary/asset noise
+            if val.lower().split('?')[0].endswith(skip_extensions):
+                continue
+
+            joined_url = urllib.parse.urljoin(source, val)
+            if self._is_internal(joined_url):
+                await self.queue.put(joined_url)
 
 
 class BruteEngine:
     """RAPTOR-grade Differential Authentication Engine with Module Support."""
     
+    # Sensitivity threshold for differential body analysis
+    SIMILARITY_THRESHOLD = 0.90
+
     def __init__(self, session: aiohttp.ClientSession, concurrency: int = 10, proxy: str = None, stealth: bool = False):
         self.session = session
         self.sem = asyncio.Semaphore(concurrency)
@@ -201,9 +212,9 @@ class BruteEngine:
                 else:
                     # Same status code, check body similarity
                     ratio = SequenceMatcher(None, body_l[:2000], baseline.failed_body_sample).ratio()
-                    # If the body is significantly different (ratio < 0.85) OR 
+                    # If the body is significantly different (ratio < SIMILARITY_THRESHOLD) OR 
                     # contains explicit success markers that the baseline DID NOT have.
-                    if ratio < 0.90: # Slightly higher threshold for sensitivity
+                    if ratio < self.SIMILARITY_THRESHOLD: 
                         # Avoid common failure keywords
                         if not any(x in body_l for x in ["invalid", "incorrect", "fail", "wrong", "error"]):
                             is_success = True

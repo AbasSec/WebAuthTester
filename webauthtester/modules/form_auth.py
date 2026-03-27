@@ -2,7 +2,6 @@ import re
 import logging
 from typing import List, Optional, Tuple
 from bs4 import BeautifulSoup
-import urllib.parse
 from .base import AuthModule
 from webauthtester.core.models import AuthEndpoint, AuthBaseline
 
@@ -21,8 +20,8 @@ class FormAuthModule(AuthModule):
                 token_tag = soup.find('input', {'name': re.compile(r'csrf|_token|nonce|authenticity_token', re.I)})
                 if token_tag:
                     return token_tag.get('value', '')
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"CSRF acquisition failure at {ep.source_page}: {e}")
         return ''
 
     async def discover(self, html: str, url: str) -> List[AuthEndpoint]:
