@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional, Tuple
 from bs4 import BeautifulSoup
+import urllib.parse
 from .base import AuthModule
 from webauthtester.core.models import AuthEndpoint, AuthBaseline
 
