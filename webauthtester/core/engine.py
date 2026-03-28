@@ -107,7 +107,7 @@ class DiscoveryEngine:
         """Extracts and filters internal links for further discovery."""
         soup = BeautifulSoup(html, 'html.parser')
         # Skip common static assets to save resources
-        skip_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.svg', '.css', '.js', '.woff', '.ttf', '.ico', '.pdf')
+        skip_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.svg', '.css', '.woff', '.ttf', '.ico', '.pdf')
         
         for tag in soup.find_all(['a', 'script', 'link']):
             val = tag.get('href') or tag.get('src')
@@ -174,6 +174,12 @@ class BruteEngine:
         
         if not samples: return False
         
+        # Validation: Ensure the baseline doesn't look like a dead/broken endpoint
+        status = samples[0][0]
+        if status in [404, 405] or status >= 500:
+            logger.warning(f"Baseline for {ep.url} returned {status}. Likely false positive or broken endpoint. Skipping.")
+            return False
+
         self.baselines[ep.url] = AuthBaseline(
             failed_status=samples[0][0],
             failed_length=len(samples[0][1]),
@@ -216,21 +222,32 @@ class BruteEngine:
                     # If the body is significantly different (ratio < SIMILARITY_THRESHOLD) OR 
                     # contains explicit success markers that the baseline DID NOT have.
                     if ratio < self.SIMILARITY_THRESHOLD: 
-                        # Only mark as success if it doesn't contain a NEW failure keyword 
-                        # that the baseline didn't have.
-                        fail_indicators = ["invalid", "incorrect", "fail", "wrong", "error"]
+                        # Expanded failure indicators to catch WAF blocks, captchas, and generic errors
+                        fail_indicators = [
+                            "invalid", "incorrect", "fail", "wrong", "error", 
+                            "captcha", "forbidden", "unauthorized", "denied", 
+                            "blocked", "security", "waf", "challenge"
+                        ]
                         if not any(x in body_l and x not in baseline.failed_body_sample for x in fail_indicators):
                             is_success = True
                     
                     # Explicit Success Tokens (overrides structural check)
-                    success_indicators = ['token', '"success":true', 'access_token', '"authenticated":true', 'jwt']
+                    success_indicators = [
+                        'token', '"success":true', 'access_token', '"authenticated":true', 
+                        'jwt', 'sid=', 'sessid=', 'welcome'
+                    ]
                     if any(x in body_l for x in success_indicators) and not any(x in baseline.failed_body_sample for x in success_indicators):
                         is_success = True
             
             # Additional check for redirects
             if not is_success and status in [301, 302, 303, 307, 308]:
                 loc = headers.get('Location', '').lower()
-                if loc and not any(x in loc for x in ['login', 'error', 'fail', 'signin', 'auth']):
+                # If redirecting to a dashboard or profile, it's likely a success.
+                # If redirecting back to login/error, it's a failure.
+                success_redirects = ['dash', 'home', 'account', 'profile', 'user', 'index']
+                failure_redirects = ['login', 'error', 'fail', 'signin', 'auth', 'forbidden']
+                
+                if loc and any(x in loc for x in success_redirects) and not any(x in loc for x in failure_redirects):
                     is_success = True
 
             if is_success:

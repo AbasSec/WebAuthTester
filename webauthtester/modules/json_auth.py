@@ -24,30 +24,34 @@ class JSONAuthModule(AuthModule):
             # If a form has fields but no standard action/method, or is explicitly marked as JSON
             u_field, p_field = None, None
             for inp in form.find_all(['input']):
-                name = inp.get('name') or inp.get('id', '')
+                name = inp.get('name') or inp.get('id') or inp.get('placeholder') or inp.get('aria-label') or inp.get('title', '')
                 nl = name.lower()
                 itype = (inp.get('type') or 'text').lower()
                 
-                if itype == "password" or 'pass' in nl:
+                if itype == "password" or any(x in nl for x in ['pass', 'pwd', 'secret']):
                     p_field = name
-                elif any(x in nl for x in ['user', 'email', 'login', 'id']):
+                elif any(x in nl for x in ['user', 'email', 'login', 'id', 'account']):
                     u_field = name
             
             if u_field and p_field:
-                # Check if this form looks like it's handled by JS
-                # (e.g., no action, or action is an API-like path)
+                # Stronger JSON detection: Avoid common non-auth patterns
                 action = form.get('action') or ''
-                if not action or '/api/' in action or 'json' in action.lower():
+                # Only add as JSON if the action is explicitly API-like or if the form is in an API context
+                # If there's NO action, it might be JS-driven, but FormAuth handles it as urlencoded by default.
+                # We only want to duplicate it here as JSON if we have a strong reason.
+                if any(x in action.lower() for x in ['api', 'json', 'auth', 'login', 'signin', 'token', 'session']) or '/api/' in url:
                     target_url = urllib.parse.urljoin(url, action or url)
-                    endpoints.append(AuthEndpoint(
-                        url=target_url,
-                        auth_type='json',
-                        method='POST',
-                        username_field=u_field,
-                        password_field=p_field,
-                        extra_fields={},
-                        source_page=url
-                    ))
+                    # Deduplicate within this discovery run
+                    if not any(e.url == target_url and e.auth_type == 'json' for e in endpoints):
+                        endpoints.append(AuthEndpoint(
+                            url=target_url,
+                            auth_type='json',
+                            method='POST',
+                            username_field=u_field,
+                            password_field=p_field,
+                            extra_fields={},
+                            source_page=url
+                        ))
 
         # 3. Heuristic: If the URL itself looks like a JSON login endpoint
         if any(path in url.lower() for path in ['/api/login', '/api/v1/auth', '/api/auth/token', '/api/session']):
@@ -77,6 +81,7 @@ class JSONAuthModule(AuthModule):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'Accept-Encoding': 'identity',
             'Referer': ep.source_page or ep.url
         }
 

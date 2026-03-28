@@ -41,3 +41,22 @@
 2026-03-20 07:57:19,003 [DEBUG] Using selector: EpollSelector
 2026-03-20 08:03:06,013 [DEBUG] Using selector: EpollSelector
 2026-03-20 08:03:19,759 [DEBUG] Using selector: EpollSelector
+2026-03-28 08:39:37,482 [DEBUG] Using selector: EpollSelector
+2026-03-28 08:41:48,042 [DEBUG] Using selector: EpollSelector
+2026-03-28 08:41:48,048 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-28 08:42:53,593 [ERROR] Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fd9a19a1fd0>
+2026-03-28 08:49:49,673 [DEBUG] Using selector: EpollSelector
+2026-03-28 08:49:49,678 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-28 08:54:43,150 [DEBUG] Using selector: EpollSelector
+2026-03-28 08:54:51,607 [DEBUG] Using selector: EpollSelector
+2026-03-28 08:55:52,514 [DEBUG] Using selector: EpollSelector
+2026-03-28 08:55:52,518 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-28 09:00:17,541 [DEBUG] Using selector: EpollSelector
+2026-03-28 09:00:17,547 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-28 09:03:50,580 [DEBUG] Using selector: EpollSelector
+2026-03-28 09:03:50,585 [INFO] Audit Started - WebAuthTester Pro v2.6 targeting https://al-mokadam-educational-agency.web.app/admin.html
+2026-03-28 09:03:52,222 [WARNING] Baseline for https://al-mokadam-educational-agency.web.app/api/v1/auth returned 404. Likely false positive or broken endpoint. Skipping.
+2026-03-28 09:03:55,884 [WARNING] Baseline for https://al-mokadam-educational-agency.web.app/api/login returned 404. Likely false positive or broken endpoint. Skipping.
+2026-03-28 09:03:56,164 [WARNING] Baseline for https://al-mokadam-educational-agency.web.app/api/auth/token returned 404. Likely false positive or broken endpoint. Skipping.
+2026-03-28 09:03:56,459 [WARNING] Baseline for https://al-mokadam-educational-agency.web.app/api/session returned 404. Likely false positive or broken endpoint. Skipping.

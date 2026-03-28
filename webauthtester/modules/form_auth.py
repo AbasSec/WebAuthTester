@@ -14,7 +14,11 @@ class FormAuthModule(AuthModule):
     async def fetch_csrf_token(self, ep: AuthEndpoint) -> str:
         """Fetches a fresh CSRF token from the source page."""
         try:
-            async with self.session.get(ep.source_page, proxy=self.proxy, timeout=10) as resp:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept-Encoding': 'identity'
+            }
+            async with self.session.get(ep.source_page, headers=headers, proxy=self.proxy, timeout=10) as resp:
                 body = await resp.text()
                 soup = BeautifulSoup(body, 'html.parser')
                 # Look for common CSRF input names
@@ -45,17 +49,19 @@ class FormAuthModule(AuthModule):
             inputs = {}
             
             for inp in form.find_all(['input', 'textarea', 'select']):
-                name = inp.get('name') or inp.get('id')
+                # Heuristic: Find the most descriptive identifier
+                name = inp.get('name') or inp.get('id') or inp.get('placeholder') or inp.get('aria-label') or inp.get('title')
                 if not name: continue
                 
                 itype = (inp.get('type') or 'text').lower()
                 nl = name.lower()
                 
-                if itype == "password" or 'pass' in nl or 'pwd' in nl:
+                # Expanded keyword matching
+                if itype == "password" or any(x in nl for x in ['pass', 'pwd', 'secret', 'mypass']):
                     p_field = name
-                elif any(x in nl for x in ['user', 'email', 'login', 'id']):
+                elif any(x in nl for x in ['user', 'email', 'login', 'id', 'account', 'member']):
                     u_field = name
-                elif any(x in nl for x in ['csrf', 'token', 'nonce', 'authenticity']):
+                elif any(x in nl for x in ['csrf', 'token', 'nonce', 'authenticity', 'xsrf']):
                     csrf_field = name
                 
                 inputs[name] = inp.get('value') or ''
@@ -86,6 +92,7 @@ class FormAuthModule(AuthModule):
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept-Encoding': 'identity'
         }
         try:
             # Use shared session for connection pooling. 

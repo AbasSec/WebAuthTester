@@ -172,23 +172,6 @@ async def run_audit() -> None:
 
     logger.info(f"Audit Started - WebAuthTester Pro v{VERSION} targeting {target}")
     
-    if not os.path.exists(userlist) or not os.path.exists(passlist):
-        print_error(f"Wordlists missing. Checked paths: {userlist}, {passlist}")
-        return
-
-    # Pre-load wordlists once
-    try:
-        with open(userlist, 'r', encoding='utf-8') as fu:
-            users = [line.strip() for line in fu if line.strip()]
-        with open(passlist, 'r', encoding='utf-8') as fp:
-            passwords = [line.strip() for line in fp if line.strip()]
-    except IOError as e:
-        print_error(f"Error reading wordlists: {e}")
-        return
-
-    if len(users) * len(passwords) <= 1:
-        console.print("[yellow][!] Warning: Small wordlist detected. For a real brute force, use the larger default lists.[/yellow]")
-
     print_status(f"Initializing Enterprise Audit for: [bold white]{target}[/bold white]")
 
     connector = aiohttp.TCPConnector(ssl=False)
@@ -198,26 +181,62 @@ async def run_audit() -> None:
         with console.status("[bold green]Crawling target and parsing DOM for entry points..."):
             endpoints = await discovery.run()
 
+        if not endpoints:
+            print_error("\nNo authentication endpoints discovered. Audit terminated.")
+            return
+
         print_success(f"Discovered and mapped {len(endpoints)} authentication gateway(s).")
+
+        # Resource-efficient wordlist counting and generation
+        if not os.path.exists(userlist) or not os.path.exists(passlist):
+            print_error(f"Wordlists missing. Checked paths: {userlist}, {passlist}")
+            return
+
+        def get_count(path):
+            with open(path, 'rb') as f:
+                return sum(1 for _ in f)
+
+        try:
+            total_users = get_count(userlist)
+            total_pass = get_count(passlist)
+        except IOError as e:
+            print_error(f"Error reading wordlists: {e}")
+            return
+
+        def wordlist_gen(path):
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped: yield stripped
+
+        if total_users * total_pass <= 1:
+            console.print("[yellow][!] Warning: Small wordlist detected. For a real brute force, use the larger default lists.[/yellow]")
 
         brute = BruteEngine(session, concurrency, proxy, stealth=stealth)
         
         for ep in endpoints:
             print_status(f"Targeting Endpoint: [bold cyan]{ep.url}[/bold cyan] (Type: {ep.auth_type})")
             
-            await brute.capture_baseline(ep)
+            with console.status("[bold yellow]Capturing baseline failure fingerprint..."):
+                try:
+                    await brute.capture_baseline(ep)
+                except Exception as e:
+                    logger.error(f"Baseline error: {e}")
+
             if ep.url not in brute.baselines and not ep.is_oauth:
+                print_error(f"Failed to capture baseline for {ep.url}. Skipping endpoint.")
                 continue
 
             if stuffing:
-                pairs = list(zip(users, passwords))
-                print_status(f"Stuffing Mode: [bold yellow]ON[/bold yellow]. Pairs: {len(pairs)}")
+                total_attempts = min(total_users, total_pass)
+                print_status(f"Stuffing Mode: [bold yellow]ON[/bold yellow]. Pairs: {total_attempts}")
+                pairs_gen = zip(wordlist_gen(userlist), wordlist_gen(passlist))
             else:
-                pairs = [(u, p) for u in users for p in passwords]
-                print_status(f"Brute Mode: [bold cyan]ON[/bold cyan]. Combinations: {len(pairs)}")
+                total_attempts = total_users * total_pass
+                print_status(f"Brute Mode: [bold cyan]ON[/bold cyan]. Combinations: {total_attempts}")
+                # Nested generator to avoid loading everything
+                pairs_gen = ((u, p) for u in wordlist_gen(userlist) for p in wordlist_gen(passlist))
 
-            total_attempts = len(pairs)
-            
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
@@ -230,26 +249,60 @@ async def run_audit() -> None:
                 async def track_task(u, p):
                     if brute.rate_limited:
                         return
-                    await brute.test(ep, u, p)
-                    progress.update(task_p, advance=1)
+                    try:
+                        await brute.test(ep, u, p)
+                    finally:
+                        progress.update(task_p, advance=1)
 
-                # Use a limited number of workers if the list is very large
-                if total_attempts > 1000:
-                    queue = asyncio.Queue()
-                    for u, p in pairs:
-                        await queue.put((u, p))
-                    
-                    async def worker():
-                        while not queue.empty():
-                            u, p = await queue.get()
+                # Use a limited worker pool to avoid memory exhaustion from task creation
+                queue = asyncio.Queue(maxsize=concurrency * 2)
+                
+                async def worker():
+                    while True:
+                        try:
+                            if brute.rate_limited:
+                                break
+                            
+                            try:
+                                item = await asyncio.wait_for(queue.get(), timeout=1.0)
+                            except asyncio.TimeoutError:
+                                continue
+
+                            u, p = item
                             await track_task(u, p)
                             queue.task_done()
+                        except asyncio.CancelledError:
+                            break
+                        except Exception as e:
+                            logger.error(f"Worker error: {e}")
+                            if not queue.empty():
+                                queue.task_done()
+
+                workers = [asyncio.create_task(worker()) for _ in range(concurrency)]
+                
+                try:
+                    for u, p in pairs_gen:
+                        if brute.rate_limited:
+                            break
+                        
+                        while not brute.rate_limited:
+                            try:
+                                await asyncio.wait_for(queue.put((u, p)), timeout=1.0)
+                                break
+                            except asyncio.TimeoutError:
+                                continue
+                except Exception as e:
+                    logger.error(f"Generation error: {e}")
+                finally:
+                    if not brute.rate_limited:
+                        try:
+                            await asyncio.wait_for(queue.join(), timeout=10.0)
+                        except asyncio.TimeoutError:
+                            pass
                     
-                    workers = [asyncio.create_task(worker()) for _ in range(concurrency)]
-                    await asyncio.gather(*workers)
-                else:
-                    tasks = [track_task(u, p) for u, p in pairs]
-                    await asyncio.gather(*tasks)
+                    for w in workers:
+                        w.cancel()
+                    await asyncio.gather(*workers, return_exceptions=True)
             
             if brute.rate_limited:
                 print_error("Security Response Triggered: Rate Limit detected. Aborted endpoint audit.")
